@@ -26,7 +26,7 @@ export type BookingPayload = {
 const getPrivateKey = () =>
   process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n") ?? "";
 
-const getGoogleCredentials = () => {
+export const getGoogleCredentials = () => {
   const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = getPrivateKey();
   const sheetId = process.env.GOOGLE_SHEET_ID;
