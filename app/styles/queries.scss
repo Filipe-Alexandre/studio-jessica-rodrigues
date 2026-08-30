@@ -1,0 +1,192 @@
+@import './globals.scss';
+
+/* #region 12. Responsividade (Media Queries) */
+
+/* =========================================
+   NOTEBOOKS PEQUENOS E TABLETS (Até 1024px)
+   ========================================= */
+@media (max-width: 1024px) {
+  /* Centraliza melhor o padding, já que não precisamos do deslocamento de desktop largo */
+  .site-shell {
+    padding: 0 32px;
+  }
+
+  .topbar {
+    width: 92vw;
+  }
+
+  /* Reduz os cards de serviços de 4 para 2 colunas */
+  .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Empilha o bloco de horários e o bloco de formulário */
+  .scheduling-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+
+  /* Solta a altura fixa para os painéis respirarem se empilhados */
+  .available-panel,
+  .booking-form {
+    height: auto;
+    min-height: 500px;
+  }
+}
+
+/* =========================================
+   TABLETS VERTICAIS E CELULARES (Até 768px)
+   ========================================= */
+@media (max-width: 768px) {
+  /* CRUCIAL: Solta a trava de 100vh. No celular o conteúdo vai crescer para baixo */
+
+body {
+    background-size: cover; /* Estica para cobrir a tela toda */
+    background-repeat: no-repeat; /* Proíbe a repetição/quebra */
+    background-attachment: fixed; /* Trava na câmera (viewport) */
+  }
+  
+  section {
+    height: auto !important;
+    max-height: none !important;
+    min-height: fit-content !important;
+    padding: 60px 1rem;
+  }
+
+  .site-shell {
+    padding: 0 20px;
+  }
+
+  /* CABEÇALHO */
+  .topbar {
+    width: 95vw;
+    padding: 14px 20px;
+  }
+  .main-nav {
+    display: none; /* Oculta as âncoras para não quebrar a barra superior */
+  }
+  .brand-tag {
+    display: none; /* Simplifica o logo para economizar espaço */
+  }
+
+  /* HERO (Banner Inicial) */
+  #hero {
+    grid-template-columns: 1fr;
+    text-align: center;
+    gap: 32px;
+  }
+  .hero-copy h1 {
+    margin: 0 auto 20px;
+  }
+  .hero-actions,
+  .highlight-list {
+    justify-content: center;
+  }
+  .portrait-card {
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  /* SOBRE O STUDIO */
+  .about-section {
+    text-align: center;
+  }
+  .about h2,
+  .about ul {
+    width: 100%;
+  }
+  .about h2 {
+    font-size: clamp(2rem, 6vw, 2.4rem) !important;
+  }
+  .about li {
+    font-size: 1.2rem;
+    text-align: left; /* Mantém a lista fácil de ler mesmo centralizando o bloco */
+  }
+
+  /* CONTATO */
+
+#contato {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  
+  padding-left: 20px;
+  padding-right: 20px; 
+}
+
+.booking-card {
+  border-radius: 32px;
+  
+  /* O SEGREDO DAS MEDIDAS RELATIVAS: */
+  width: 100%; /* No celular, ele ocupa todo o espaço possível (respeitando o padding acima) */
+  max-width: 900px; /* No desktop, ele para de crescer ao atingir 900px */
+  
+  margin: 0 auto; /* Força a centralização horizontal absoluta */
+}
+
+  /* MÉTRICAS E RESULTADOS */
+  .result-grid,
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* RODAPÉ E MAPA */
+  .site-footer {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 40px;
+    padding: 32px 24px;
+  }
+  .footer-info,
+  .footer-map-container {
+    max-width: 100%;
+    min-width: unset;
+  }
+  .footer-brand,
+  .footer-links {
+    justify-content: center;
+  }
+}
+
+/* =========================================
+   CELULARES TELAS MENORES (Até 480px)
+   ========================================= */
+@media (max-width: 480px) {
+  /* Evita que o logo grandão esprema o botão de agendar no topo */
+  .topbar .logo-name {
+    font-size: 1.3rem;
+  }
+  .topbar .btn {
+    padding: 0.7rem 1.1rem;
+    font-size: 0.85rem;
+  }
+
+  /* Transforma cards 2x2 em 1x1 */
+  .card-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Encaixa o calendário de horas em 1 coluna só */
+  .slot-list {
+    grid-template-columns: 1fr;
+    max-height: 400px; /* Reduz a barra de rolagem no celular */
+  }
+
+  .available-panel,
+  .booking-form {
+    padding: 24px 18px;
+  }
+
+  /* Botão de Agendamento Final */
+  .avaliacao {
+    width: 100%;
+    height: 55px; /* Aumenta a área de toque do dedo */
+  }
+  
+  .contato-icons {
+    flex-wrap: wrap; 
+  }
+}
+/* #endregion */

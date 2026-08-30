@@ -1,0 +1,21 @@
+{
+  "name": "Studio Jessica Rodrigues",
+  "short_name": "Studio JR",
+  "description": "Estética Facial e Bem-estar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5efed", 
+  "theme_color": "#7c638d",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
