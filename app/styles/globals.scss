@@ -171,8 +171,8 @@ main>.content-section:first-of-type {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.34);
   box-shadow: 0 20px 54px rgba(78, 48, 94, 0.11);
-  backdrop-filter: blur(18px) saturate(1.22);
   -webkit-backdrop-filter: blur(18px) saturate(1.22);
+  backdrop-filter: blur(18px) saturate(1.22);
 }
 
 .btn {
@@ -216,8 +216,8 @@ main>.content-section:first-of-type {
   position: relative;
   overflow: hidden;
   z-index: 1;
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .eyebrow::before,
@@ -282,8 +282,8 @@ main>.content-section:first-of-type {
   background: rgba(255, 255, 255, 0.14);
   border: 1px solid rgba(255, 255, 255, 0.38);
   box-shadow: 0 18px 40px rgba(78, 48, 94, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.25);
-  backdrop-filter: blur(20px) saturate(1.4);
   -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
@@ -824,6 +824,7 @@ display: grid;
   color: #ff4d4f;
   border: 1px solid rgba(255, 77, 79, 0.3);
   background-color: rgba(255, 77, 79, 0.1);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 
@@ -990,6 +991,7 @@ display: grid;
   justify-content: center;
   z-index: 9999;
   background: rgba(0, 0, 0, 0.5);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
 
@@ -1136,6 +1138,7 @@ display: grid;
   flex-direction: column;
   gap: 12px;
   background: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 16px;
