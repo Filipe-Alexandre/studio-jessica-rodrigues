@@ -317,6 +317,7 @@ export default function SchedulingForm() {
               value={formData.cpf}
               onChange={handleCpfChange}
               placeholder="000.000.000-00"
+              inputMode="numeric"
               maxLength={14}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
