@@ -1,8 +1,6 @@
-import "server-only";
-import { GoogleAuth } from "google-auth-library";
+import "server-only"; 
 import { google } from "googleapis";
 
-// ==================== Tipos ====================
 export type ScheduleSlot = {
   id: string;
   date: string;
@@ -22,31 +20,32 @@ export type BookingPayload = {
   time: string;
 };
 
-// ==================== Credenciais ====================
-const getPrivateKey = () =>
-  process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n") ?? "";
-
-export const getGoogleCredentials = () => {
+export function getGoogleCredentials() {
   const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const privateKey = getPrivateKey();
+  const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
   const sheetId = process.env.GOOGLE_SHEET_ID;
+
   return { serviceAccountEmail, privateKey, sheetId };
-};
+}
 
 export function hasGoogleConfig() {
   const { serviceAccountEmail, privateKey, sheetId } = getGoogleCredentials();
   return Boolean(serviceAccountEmail && privateKey && sheetId);
 }
 
-function buildGoogleAuth() {
+function getSheetRange(sheetName: string, startCell: string) {
+  const safeName = sheetName.includes(" ") ? `'${sheetName}'` : sheetName;
+  return `${safeName}!${startCell}`;
+}
+
+// O tipo :any previne o erro de compilação TS2769
+function buildGoogleAuth(): any {
   const { serviceAccountEmail, privateKey } = getGoogleCredentials();
   if (!serviceAccountEmail || !privateKey) return null;
 
-  return new GoogleAuth({
-    credentials: {
-      client_email: serviceAccountEmail,
-      private_key: privateKey,
-    },
+  return new google.auth.JWT({
+    email: serviceAccountEmail,
+    key: privateKey,
     scopes: [
       "https://www.googleapis.com/auth/spreadsheets",
       "https://www.googleapis.com/auth/calendar",
@@ -54,26 +53,7 @@ function buildGoogleAuth() {
   });
 }
 
-// ==================== Utilitários ====================
-function getSheetRange(sheetName: string, startCell: string) {
-  const safeName = sheetName.includes(" ") ? `'${sheetName}'` : sheetName;
-  return `${safeName}!${startCell}`;
-}
-
-// ==================== Google Clients ====================
-const googleAuth = buildGoogleAuth();
-
-export const sheets = google.sheets({
-  version: "v4",
-  auth: googleAuth as any,
-});
-
-export const calendar = google.calendar({
-  version: "v3",
-  auth: googleAuth as any,
-});
-
-// ==================== Leitura de Procedimentos ====================
+// Lendo procedimentos
 export async function readProcedimentosFromSheet(): Promise<string[]> {
   if (!hasGoogleConfig()) return ["Microagulhamento (Mock)"];
 
@@ -81,10 +61,10 @@ export async function readProcedimentosFromSheet(): Promise<string[]> {
     const auth = buildGoogleAuth();
     if (!auth) return ["Erro de autenticação"];
 
-    const sheetsClient = google.sheets({ version: "v4", auth: auth as any });
+    const sheets = google.sheets({ version: "v4", auth });
     const { sheetId } = getGoogleCredentials();
-
-    const response = await sheetsClient.spreadsheets.values.get({
+        
+    const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId!,
       range: getSheetRange("Procedimentos", "A2:A"),
     });
@@ -96,7 +76,7 @@ export async function readProcedimentosFromSheet(): Promise<string[]> {
   }
 }
 
-// ==================== Leitura de Horários Disponíveis ====================
+// Lendo a aba Horários com CRUZAMENTO DE DADOS inteligente
 export async function readAvailabilityFromSheet(): Promise<ScheduleSlot[]> {
   if (!hasGoogleConfig()) return [];
 
@@ -104,28 +84,34 @@ export async function readAvailabilityFromSheet(): Promise<ScheduleSlot[]> {
     const auth = buildGoogleAuth();
     if (!auth) return [];
 
-    const sheetsClient = google.sheets({ version: "v4", auth: auth as any });
+    const sheets = google.sheets({ version: "v4", auth });
     const { sheetId } = getGoogleCredentials();
-
+        
+    // Faz as duas requisições ao MESMO TEMPO para não deixar o site lento
     const [horariosResponse, agendamentosResponse] = await Promise.all([
-      sheetsClient.spreadsheets.values.get({
+      sheets.spreadsheets.values.get({
         spreadsheetId: sheetId!,
         range: getSheetRange("Horários", "A2:E"),
       }),
-      sheetsClient.spreadsheets.values.get({
+      sheets.spreadsheets.values.get({
         spreadsheetId: sheetId!,
-        range: getSheetRange("Agendamentos", "A2:E"),
-      }),
+        range: getSheetRange("Agendamentos", "A2:E"), // Pega o ID (A) e Status (E)
+      })
     ]);
 
     const horariosRows = horariosResponse.data.values ?? [];
     const agendamentosRows = agendamentosResponse.data.values ?? [];
 
+    // Cria uma lista de IDs que estão OCUPADOS
     const horariosOcupados = new Set<string>();
+
     agendamentosRows.forEach(row => {
       const id = String(row[0]).trim();
       const statusAgendamento = String(row[4] || "").toLowerCase().trim();
-      if (["reservado", "concluído", "concluido"].includes(statusAgendamento)) {
+
+      // Se for reservado ou concluído, a gente marca como OCUPADO.
+      // Se for "cancelado", a gente ignora, fazendo o horário reaparecer!
+      if (statusAgendamento === "reservado" || statusAgendamento === "concluído" || statusAgendamento === "concluido") {
         horariosOcupados.add(id);
       }
     });
@@ -134,12 +120,16 @@ export async function readAvailabilityFromSheet(): Promise<ScheduleSlot[]> {
       .filter((row) => {
         const id = String(row[0]).trim();
         const statusHorarioBase = String(row[4] || "").toLowerCase().trim();
+                
+        // Compara com "livre" minúsculo
         const isLivreNaBase = row.length >= 5 && statusHorarioBase === "livre";
         if (!isLivreNaBase || horariosOcupados.has(id)) return false;
 
+        // Validação de Tempo (Buffer de 4 horas)
         try {
           const dataStr = String(row[1]).trim();
           const timeStr = String(row[3]).trim();
+
           const [dia, mes, ano] = dataStr.split('/');
           const [hora, minuto] = timeStr.split(':');
 
@@ -147,15 +137,17 @@ export async function readAvailabilityFromSheet(): Promise<ScheduleSlot[]> {
             const slotDate = new Date(Number(ano), Number(mes) - 1, Number(dia), Number(hora), Number(minuto));
             const nowString = new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" });
             const nowBR = new Date(nowString);
-            const bufferTimeBR = new Date(nowBR.getTime() + 4 * 60 * 60 * 1000);
+            const bufferTimeBR = new Date(nowBR.getTime() + (4 * 60 * 60 * 1000));
 
-            if (slotDate < bufferTimeBR) return false;
+            if (slotDate < bufferTimeBR) {
+              return false;
+            }
           }
         } catch (e) {
           console.error("Erro ao analisar data do slot:", e);
         }
 
-        return true;
+        return true; 
       })
       .map((row) => ({
         id: String(row[0]).trim(),
@@ -170,7 +162,7 @@ export async function readAvailabilityFromSheet(): Promise<ScheduleSlot[]> {
   }
 }
 
-// ==================== Salvar Agendamento ====================
+// Salvando na aba Agendamentos com o CPF (Deixando o update de Horários para a fórmula PROCV)
 export async function appendBookingToSheet(payload: BookingPayload) {
   if (!hasGoogleConfig()) return { ok: true };
 
@@ -179,9 +171,9 @@ export async function appendBookingToSheet(payload: BookingPayload) {
     if (!auth) return { ok: false };
 
     const { sheetId } = getGoogleCredentials();
-    const sheetsClient = google.sheets({ version: "v4", auth: auth as any });
-
-    await sheetsClient.spreadsheets.values.append({
+    const sheets = google.sheets({ version: "v4", auth });
+        
+    await sheets.spreadsheets.values.append({
       spreadsheetId: sheetId!,
       range: getSheetRange("Agendamentos", "A1"),
       valueInputOption: "USER_ENTERED",
@@ -191,43 +183,22 @@ export async function appendBookingToSheet(payload: BookingPayload) {
           payload.date,
           payload.dayLabel,
           payload.time,
-          "Reservado",
+          "Reservado", 
           payload.servico,
           payload.nome,
           payload.telefone,
-          payload.cpf
+          payload.cpf 
         ]],
       },
     });
-
-    const horariosResponse = await sheetsClient.spreadsheets.values.get({
-      spreadsheetId: sheetId!,
-      range: getSheetRange("Horários", "A:A"),
-    });
-
-    const rows = horariosResponse.data.values || [];
-    const rowIndex = rows.findIndex(row => String(row[0]).trim() === payload.id);
-
-    if (rowIndex !== -1) {
-      const sheetRow = rowIndex + 1;
-      await sheetsClient.spreadsheets.values.update({
-        spreadsheetId: sheetId!,
-        range: getSheetRange("Horários", `E${sheetRow}`),
-        valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [["Reservado"]]
-        }
-      });
-    }
-
+    
     return { ok: true };
-  } catch (error) {
-    console.error("Erro na atualização da planilha:", error);
+  } catch {
     return { ok: false };
   }
 }
 
-// ==================== Criar Evento no Calendar ====================
+// Incluindo o CPF na descrição do calendário com crases corrigidas
 export async function createCalendarEvent(payload: BookingPayload) {
   if (!hasGoogleConfig()) return { ok: true };
 
@@ -235,15 +206,16 @@ export async function createCalendarEvent(payload: BookingPayload) {
     const auth = buildGoogleAuth();
     if (!auth) return { ok: false };
 
-    const calendarClient = google.calendar({ version: "v3", auth: auth as any });
+    const calendar = google.calendar({ version: "v3", auth });
+        
     const [dia, mes, ano] = payload.date.split('/');
     const formattedDate = `${ano}-${mes}-${dia}`;
-
+        
     const start = new Date(`${formattedDate}T${payload.time}:00`);
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // Duração de 2h
 
-    await calendarClient.events.insert({
-      calendarId: process.env.GOOGLE_CALENDAR_ID,
+    await calendar.events.insert({
+      calendarId: process.env.GOOGLE_CALENDAR_ID ?? "primary",
       requestBody: {
         summary: `Agendamento - ${payload.nome} (${payload.servico})`,
         description: `Cliente: ${payload.nome}\nTelefone: ${payload.telefone}\nCPF: ${payload.cpf}\nServiço: ${payload.servico}`,
@@ -251,15 +223,14 @@ export async function createCalendarEvent(payload: BookingPayload) {
         end: { dateTime: end.toISOString(), timeZone: "America/Sao_Paulo" },
       },
     });
-
     return { ok: true };
-  } catch (error: any) {
-    console.error(">>> ERRO GRAVE NO CALENDÁRIO:", error.message || error);
+  } catch (error) {
+    console.error("Erro ao criar evento no Calendar:", error);
     return { ok: false };
   }
 }
 
-// ==================== Verificar CPF Ativo ====================
+// Trava de segurança para impedir agendamentos duplos
 export async function checkActiveBooking(cpf: string, servico: string): Promise<boolean> {
   if (!hasGoogleConfig()) return false;
 
@@ -268,15 +239,16 @@ export async function checkActiveBooking(cpf: string, servico: string): Promise<
     if (!auth) return false;
 
     const { sheetId } = getGoogleCredentials();
-    const sheetsClient = google.sheets({ version: "v4", auth: auth as any });
+    const sheets = google.sheets({ version: "v4", auth });
 
-    const response = await sheetsClient.spreadsheets.values.get({
+    const response = await sheets.spreadsheets.values.get({
       spreadsheetId: sheetId!,
       range: getSheetRange("Agendamentos", "A:J"),
     });
 
     const rows = response.data.values || [];
 
+    // Tipagem any[] corrigida
     return rows.some((row: any[]) => {
       const rowStatus = String(row[4] || "").trim().toLowerCase();
       const rowServico = String(row[5] || "").trim().toLowerCase();
@@ -286,8 +258,8 @@ export async function checkActiveBooking(cpf: string, servico: string): Promise<
       const cleanInputCpf = cpf.replace(/\D/g, "");
       const cleanInputServico = servico.trim().toLowerCase();
 
-      return cleanRowCpf === cleanInputCpf &&
-             rowStatus === "reservado" &&
+      return cleanRowCpf === cleanInputCpf && 
+             rowStatus === "reservado" && 
              rowServico === cleanInputServico;
     });
   } catch (error) {
