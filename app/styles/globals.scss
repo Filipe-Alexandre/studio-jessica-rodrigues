@@ -1023,7 +1023,7 @@ display: grid;
 @property --progress {
   syntax: "<percentage>";
   inherits: false;
-  initial-value: 0%;
+  initial-value: 0.01%;
 }
 
 .status-icon-container {
