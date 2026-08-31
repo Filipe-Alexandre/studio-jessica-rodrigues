@@ -142,8 +142,6 @@ select {
 body::before {
   content: "";
   position: absolute;
-
-  /* Técnica Breakout: Empurra para o centro e puxa metade da tela de volta */
   left: 50%;
   bottom: 0;
   transform: translateX(-50%);
