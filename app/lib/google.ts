@@ -22,6 +22,7 @@ export type BookingPayload = {
 
 export function getGoogleCredentials() {
   const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  // CORREÇÃO: Duas barras no regex para garantir a leitura da chave do .env
   const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
   const sheetId = process.env.GOOGLE_SHEET_ID;
 
@@ -38,7 +39,6 @@ function getSheetRange(sheetName: string, startCell: string) {
   return `${safeName}!${startCell}`;
 }
 
-// O tipo :any previne o erro de compilação TS2769
 function buildGoogleAuth(): any {
   const { serviceAccountEmail, privateKey } = getGoogleCredentials();
   if (!serviceAccountEmail || !privateKey) return null;
@@ -87,7 +87,6 @@ export async function readAvailabilityFromSheet(): Promise<ScheduleSlot[]> {
     const sheets = google.sheets({ version: "v4", auth });
     const { sheetId } = getGoogleCredentials();
         
-    // Faz as duas requisições ao MESMO TEMPO para não deixar o site lento
     const [horariosResponse, agendamentosResponse] = await Promise.all([
       sheets.spreadsheets.values.get({
         spreadsheetId: sheetId!,
@@ -95,22 +94,19 @@ export async function readAvailabilityFromSheet(): Promise<ScheduleSlot[]> {
       }),
       sheets.spreadsheets.values.get({
         spreadsheetId: sheetId!,
-        range: getSheetRange("Agendamentos", "A2:E"), // Pega o ID (A) e Status (E)
+        range: getSheetRange("Agendamentos", "A2:E"),
       })
     ]);
 
     const horariosRows = horariosResponse.data.values ?? [];
     const agendamentosRows = agendamentosResponse.data.values ?? [];
 
-    // Cria uma lista de IDs que estão OCUPADOS
     const horariosOcupados = new Set<string>();
 
     agendamentosRows.forEach(row => {
       const id = String(row[0]).trim();
       const statusAgendamento = String(row[4] || "").toLowerCase().trim();
 
-      // Se for reservado ou concluído, a gente marca como OCUPADO.
-      // Se for "cancelado", a gente ignora, fazendo o horário reaparecer!
       if (statusAgendamento === "reservado" || statusAgendamento === "concluído" || statusAgendamento === "concluido") {
         horariosOcupados.add(id);
       }
@@ -121,11 +117,9 @@ export async function readAvailabilityFromSheet(): Promise<ScheduleSlot[]> {
         const id = String(row[0]).trim();
         const statusHorarioBase = String(row[4] || "").toLowerCase().trim();
                 
-        // Compara com "livre" minúsculo
         const isLivreNaBase = row.length >= 5 && statusHorarioBase === "livre";
         if (!isLivreNaBase || horariosOcupados.has(id)) return false;
 
-        // Validação de Tempo (Buffer de 4 horas)
         try {
           const dataStr = String(row[1]).trim();
           const timeStr = String(row[3]).trim();
@@ -147,7 +141,7 @@ export async function readAvailabilityFromSheet(): Promise<ScheduleSlot[]> {
           console.error("Erro ao analisar data do slot:", e);
         }
 
-return true; 
+        return true; 
       })
       .map((row) => ({
         id: String(row[0]).trim(),
@@ -156,7 +150,6 @@ return true;
         time: String(row[3]).trim(),
         status: String(row[4]).trim(),
       }))
-      // NOVO: Ordenação cronológica rigorosa
       .sort((a, b) => {
         const [diaA, mesA, anoA] = a.date.split('/');
         const [horaA, minutoA] = a.time.split(':');
@@ -174,7 +167,6 @@ return true;
   }
 }
 
-// Salvando na aba Agendamentos com o CPF (Deixando o update de Horários para a fórmula PROCV)
 export async function appendBookingToSheet(payload: BookingPayload) {
   if (!hasGoogleConfig()) return { ok: true };
 
@@ -210,7 +202,7 @@ export async function appendBookingToSheet(payload: BookingPayload) {
   }
 }
 
-// Incluindo o CPF na descrição do calendário com crases corrigidas
+// CORREÇÃO: Crases (Template Literals) restauradas
 export async function createCalendarEvent(payload: BookingPayload) {
   if (!hasGoogleConfig()) return { ok: true };
 
@@ -224,7 +216,7 @@ export async function createCalendarEvent(payload: BookingPayload) {
     const formattedDate = `${ano}-${mes}-${dia}`;
         
     const start = new Date(`${formattedDate}T${payload.time}:00`);
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // Duração de 2h
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); 
 
     await calendar.events.insert({
       calendarId: process.env.GOOGLE_CALENDAR_ID ?? "primary",
@@ -236,13 +228,12 @@ export async function createCalendarEvent(payload: BookingPayload) {
       },
     });
     return { ok: true };
-  } catch (error) {
-    console.error("Erro ao criar evento no Calendar:", error);
+  } catch (error: any) {
+    console.error(">>> ERRO GRAVE NO CALENDÁRIO:", error.message || error);
     return { ok: false };
   }
 }
 
-// Trava de segurança para impedir agendamentos duplos
 export async function checkActiveBooking(cpf: string, servico: string): Promise<boolean> {
   if (!hasGoogleConfig()) return false;
 
@@ -260,7 +251,6 @@ export async function checkActiveBooking(cpf: string, servico: string): Promise<
 
     const rows = response.data.values || [];
 
-    // Tipagem any[] corrigida
     return rows.some((row: any[]) => {
       const rowStatus = String(row[4] || "").trim().toLowerCase();
       const rowServico = String(row[5] || "").trim().toLowerCase();
