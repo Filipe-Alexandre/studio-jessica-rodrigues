@@ -50,25 +50,24 @@
     /* Trava na câmera (viewport) */
   }
 
-body::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  width: 100%;
-  height: 80vh;
-  bottom: 0px;
-  background: url('/assets/imgs/lirio-footer.svg') center center / cover no-repeat;
-  opacity: 0.3;
-  z-index: -1;
-  pointer-events: none;
-}
+  body::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 0px;
+    transform: translate(-50%, 10px);
+    width: 100%;
+    height: 80vh;
+    background: url('/assets/imgs/lirio-footer.svg') center center / cover no-repeat;
+    opacity: 0.3;
+    z-index: -1;
+    pointer-events: none;
+  }
 
   #hero::before {
     content: "";
     position: absolute;
-    top: 4.1%;
+    top: 3%;
     left: 50%;
     transform: translate(-50%, -50%);
     width: 100%;
@@ -87,7 +86,12 @@ body::before {
   }
 
   .site-shell {
-    padding: 0 20px;
+    padding: 0 5px;
+  }
+
+  h2 {
+    font-size: clamp(1.8rem, 6vw, 2.4rem) !important;
+    font-weight: 800;
   }
 
   /* CABEÇALHO */
@@ -111,6 +115,7 @@ body::before {
     grid-template-columns: 1fr;
     text-align: center;
     gap: 32px;
+    margin-top: 30px;
   }
 
   .hero-copy h1 {
@@ -120,6 +125,10 @@ body::before {
   .hero-actions,
   .highlight-list {
     justify-content: center;
+  }
+
+  .highlight-list {
+    display: none;
   }
 
   .portrait-card {
@@ -139,12 +148,19 @@ body::before {
 
   .about h2 {
     font-size: clamp(2rem, 6vw, 2.4rem) !important;
+    text-align: left;
+    margin-bottom: 30px;
   }
 
   .about li {
     font-size: 1.2rem;
-    text-align: left;
+    text-align: right;
+    margin-bottom: 20px;
     /* Mantém a lista fácil de ler mesmo centralizando o bloco */
+  }
+
+  .about li:nth-child(2) {
+    text-align: left;
   }
 
   /* CONTATO */
