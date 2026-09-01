@@ -329,6 +329,7 @@ main>.content-section:first-of-type {
   grid-template-columns: 1.2fr 1fr;
   gap: 42px;
   align-items: center;
+  margin-top: 60px;
 }
 
 #hero::before {
@@ -359,7 +360,7 @@ main>.content-section:first-of-type {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  margin-top: 28px;
+  margin-top: 50px;
 }
 
 .highlight-list {
@@ -386,14 +387,15 @@ main>.content-section:first-of-type {
 
 .portrait-card {
   position: relative;
-  width: 95%;
   aspect-ratio: 1 / 1;
+  width: 100%;
+  margin: auto;
   border-radius: 36px;
   overflow: hidden;
   display: flex;
   align-items: end;
   justify-content: center;
-  padding: 24px;
+  padding: 2%;
   background: rgba(255, 255, 255, 0.05);
 }
 
@@ -401,12 +403,13 @@ main>.content-section:first-of-type {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
+  aspect-ratio: 1 / 1;
   height: 100%;
   object-fit: cover;
   opacity: 0;
   transition: opacity 1.2s ease-in-out;
   z-index: -1;
+  padding: 1%;
 }
 
 .hero-carousel-img.active {
@@ -646,6 +649,7 @@ main>.content-section:first-of-type {
 .scheduling-shell {
   display: grid;
   align-items: center;
+  margin-bottom: 150px
 }
 
 .scheduling-header {
@@ -670,6 +674,7 @@ main>.content-section:first-of-type {
 .available-panel {
   display: flex;
   flex-direction: column;
+  z-index: 11;
 }
 
 .available-panel h3,
