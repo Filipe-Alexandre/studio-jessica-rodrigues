@@ -23,7 +23,6 @@
   --font-logo: "Brown Carolina", "Times New Roman", serif;
   --font-body: "Questrial", "Segoe UI", sans-serif;
 }
-
 /* #endregion */
 
 /* #region 2. Resets e Tipografia Global */
@@ -37,10 +36,6 @@ html {
   scroll-padding-top: 120px;
 }
 
-section {
-  max-height: 100vh;
-}
-
 body {
   min-height: 100vh;
   background:
@@ -50,7 +45,6 @@ body {
   background-repeat: no-repeat;
   background-attachment: fixed;
   background-size: cover;
-  
   color: var(--foreground);
   font-family: var(--font-body);
   position: relative;
@@ -58,6 +52,7 @@ body {
 
 section {
   height: 100vh;
+  max-height: 100vh;
 }
 
 img {
@@ -128,7 +123,6 @@ select {
   max-width: 700px;
   margin-bottom: 30px;
 }
-
 /* #endregion */
 
 /* #region 3. Utilitários e Componentes Globais */
@@ -138,7 +132,6 @@ select {
   padding: 0 28px 0 60px;
 }
 
-/* O jardim projetado em 100vw, ignorando os limites de largura do footer */
 body::before {
   content: "";
   position: absolute;
@@ -245,25 +238,14 @@ main>.content-section:first-of-type {
 }
 
 @keyframes eyebrowGlow1 {
-  0% {
-    transform: translate(0, 0) scale(1);
-  }
-
-  100% {
-    transform: translate(40px, 15px) scale(1.4);
-  }
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(40px, 15px) scale(1.4); }
 }
 
 @keyframes eyebrowGlow2 {
-  0% {
-    transform: translate(0, 0) scale(1);
-  }
-
-  100% {
-    transform: translate(-40px, -15px) scale(1.4);
-  }
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(-40px, -15px) scale(1.4); }
 }
-
 /* #endregion */
 
 /* #region 4. Cabeçalho (Header) */
@@ -339,7 +321,6 @@ main>.content-section:first-of-type {
 .main-nav a:hover {
   color: var(--primary-strong);
 }
-
 /* #endregion */
 
 /* #region 5. Seção: Hero */
@@ -413,7 +394,6 @@ main>.content-section:first-of-type {
   align-items: end;
   justify-content: center;
   padding: 24px;
-
   background: rgba(255, 255, 255, 0.05);
 }
 
@@ -493,7 +473,6 @@ main>.content-section:first-of-type {
   bottom: 26px;
   left: 28px;
 }
-
 /* #endregion */
 
 /* #region 6. Seção: Sobre */
@@ -565,7 +544,6 @@ main>.content-section:first-of-type {
   background: linear-gradient(135deg, var(--secondary-strong), var(--primary));
   box-shadow: 0 0 0 4px rgba(124, 99, 141, 0.1);
 }
-
 /* #endregion */
 
 /* #region 7. Seção: Procedimentos, Cards e Resultados */
@@ -662,12 +640,11 @@ main>.content-section:first-of-type {
   color: var(--muted);
   font-size: 0.82rem;
 }
-
 /* #endregion */
 
 /* #region 8. Seção: Agendamento e Formulário */
 .scheduling-shell {
-display: grid;
+  display: grid;
   align-items: center;
 }
 
@@ -687,6 +664,7 @@ display: grid;
   border-radius: 30px;
   padding: 24px;
   height: 600px;
+  min-width: 0;
 }
 
 .available-panel {
@@ -701,6 +679,55 @@ display: grid;
   font-weight: 700;
   color: var(--foreground);
   font-family: var(--font-display);
+}
+
+.month-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.month-filters::-webkit-scrollbar {
+  height: 4px; 
+}
+.month-filters::-webkit-scrollbar-track {
+  background: rgba(124, 99, 141, 0.08);
+  border-radius: 4px;
+}
+.month-filters::-webkit-scrollbar-thumb {
+  background: rgba(124, 99, 141, 0.35);
+  border-radius: 4px;
+}
+
+.month-btn {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+  padding: 0.5rem 1.2rem;
+  border-radius: 999px;
+  border: 1px solid rgba(124, 99, 141, 0.2);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  transition: all 0.2s ease;
+}
+
+.month-btn:hover {
+  background: rgba(124, 99, 141, 0.08);
+  color: var(--primary-strong);
+}
+
+.month-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(124, 99, 141, 0.25);
 }
 
 .slot-list {
@@ -959,22 +986,10 @@ display: grid;
 }
 
 @keyframes btnLoadingBar {
-  0% {
-    width: 0%;
-    opacity: 1;
-  }
-
-  80% {
-    width: 100%;
-    opacity: 1;
-  }
-
-  100% {
-    width: 100%;
-    opacity: 0;
-  }
+  0% { width: 0%; opacity: 1; }
+  80% { width: 100%; opacity: 1; }
+  100% { width: 100%; opacity: 0; }
 }
-
 /* #endregion */
 
 /* #region 9. Popups e Animações de Status */
@@ -1009,15 +1024,8 @@ display: grid;
 }
 
 @keyframes popIn {
-  from {
-    transform: scale(0.9);
-    opacity: 0;
-  }
-
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
 }
 
 @property --progress {
@@ -1071,15 +1079,9 @@ display: grid;
 }
 
 @keyframes fillProgress {
-  0% {
-    --progress: 0%;
-  }
-
-  100% {
-    --progress: 100%;
-  }
+  0% { --progress: 0%; }
+  100% { --progress: 100%; }
 }
-
 /* #endregion */
 
 /* #region 10. Seção: Avaliações (Reviews) */
@@ -1167,7 +1169,6 @@ display: grid;
     }
   }
 }
-
 /* #endregion */
 
 /* #region 11. Seção: Contato, Rodapé e Mapa (Footer) */
@@ -1177,7 +1178,6 @@ display: grid;
 }
 
 .contato-icons {
-
   a,
   .contato-btn {
     border: 1px solid var(--primary);
@@ -1336,5 +1336,4 @@ display: grid;
   border: 1px solid var(--panel-border);
   box-shadow: 0 10px 30px var(--shadow);
 }
-
 /* #endregion */

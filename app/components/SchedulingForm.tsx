@@ -30,18 +30,11 @@ const isValidCpf = (cpf: string) => {
   return true;
 };
 
-// =========================================
-// NOVO: GERADOR DE CALENDÁRIO UNIVERSAL (.ICS)
-// =========================================
 const generateICS = (servico: string, dateStr: string, timeStr: string) => {
   try {
     const [dia, mes, ano] = dateStr.split('/');
     const [hora, minuto] = timeStr.split(':');
-
-    // Formatação de data no padrão ICS (Sem traços ou dois pontos)
     const startDate = `${ano}${mes}${dia}T${hora}${minuto}00`;
-
-    // Calcula o fim (adicionando 2 horas padrão)
     const endHora = String(Number(hora) + 2).padStart(2, '0');
     const endDate = `${ano}${mes}${dia}T${endHora}${minuto}00`;
 
@@ -57,7 +50,6 @@ DESCRIPTION:Seu momento de cuidado e bem-estar no ${STUDIO_NAME}.
 END:VEVENT
 END:VCALENDAR`;
 
-    // Cria o arquivo virtual e força o download
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -71,11 +63,24 @@ END:VCALENDAR`;
   }
 };
 
+const getMonthName = (dateStr: string) => {
+  const [dia, mes, ano] = dateStr.split('/');
+  const date = new Date(Number(ano), Number(mes) - 1, 1);
+  const currentYear = new Date().getFullYear();
+  const monthStr = date.toLocaleDateString('pt-BR', { month: 'long' });
+
+  if (Number(ano) === currentYear) {
+    return monthStr;
+  } else {
+    return `${monthStr} de ${ano.slice(-2)}`;
+  }
+};
+
 export default function SchedulingForm() {
   const [slots, setSlots] = useState<ScheduleSlot[]>([]);
   const [procedimentos, setProcedimentos] = useState<string[]>([]);
   const [selectedSlotId, setSelectedSlotId] = useState<string>("");
-
+  const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const nomeInputRef = useRef<HTMLInputElement>(null);
@@ -96,13 +101,9 @@ export default function SchedulingForm() {
     message: "",
   });
 
-  // =========================================
-  // NOVO: CONTROLE DO PEDÁGIO VISUAL
-  // =========================================
   const [popupStep, setPopupStep] = useState<1 | 2>(1);
   const [agendamentoConfirmado, setAgendamentoConfirmado] = useState<{ servico: string, date: string, time: string } | null>(null);
   const [waLinkStr, setWaLinkStr] = useState<string>("");
-
   const [isLoading, setIsLoading] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -110,9 +111,6 @@ export default function SchedulingForm() {
     setIsMounted(true);
   }, []);
 
-  // =========================================================
-  // ATUALIZADO: Timer de 5s age APENAS em mensagens de erro
-  // =========================================================
   useEffect(() => {
     if (status.message && status.type === 'error') {
       const timer = setTimeout(() => {
@@ -127,11 +125,15 @@ export default function SchedulingForm() {
       try {
         const response = await fetch("/api/availability");
         const data = await response.json();
-        setSlots(data.slots ?? []);
+        const fetchedSlots = data.slots ?? [];
+        setSlots(fetchedSlots);
         setProcedimentos(data.procedimentos ?? []);
 
         if (data.procedimentos?.length > 0) {
           setFormData(current => ({ ...current, servico: data.procedimentos[0] }));
+        }
+        if (fetchedSlots.length > 0) {
+          setSelectedMonth(getMonthName(fetchedSlots[0].date));
         }
       } catch {
         setSlots([]);
@@ -162,11 +164,9 @@ export default function SchedulingForm() {
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
     if (value.length > 11) value = value.slice(0, 11);
-
     value = value.replace(/(\d{3})(\d)/, "$1.$2");
     value = value.replace(/(\d{3})(\d)/, "$1.$2");
     value = value.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-
     setFormData({ ...formData, cpf: value });
   };
 
@@ -193,7 +193,7 @@ export default function SchedulingForm() {
 
     setIsLoading(true);
     setStatus({ type: "idle", message: "" });
-    setPopupStep(1); // Garante que o fluxo comece no passo 1
+    setPopupStep(1);
 
     const payload = {
       id: chosenSlot.id,
@@ -219,17 +219,20 @@ export default function SchedulingForm() {
         throw new Error(result.message || "Erro ao realizar agendamento.");
       }
 
-      setSlots((currentSlots) => currentSlots.filter((slot) => slot.id !== selectedSlotId));
-      setSelectedSlotId("");
+      const remainingSlots = slots.filter((slot) => slot.id !== selectedSlotId);
+      setSlots(remainingSlots);
 
-      // Salva os dados para gerar o ICS e o link do WhatsApp
+      const currentMonthStillHasSlots = remainingSlots.some(slot => getMonthName(slot.date) === selectedMonth);
+      if (!currentMonthStillHasSlots && remainingSlots.length > 0) {
+        setSelectedMonth(getMonthName(remainingSlots[0].date));
+      }
+
+      setSelectedSlotId("");
       setAgendamentoConfirmado({ servico: payload.servico, date: payload.date, time: payload.time });
       setWaLinkStr(result.waLink || `https://wa.me/${STUDIO_PHONE}`);
 
       setStatus({ type: "success", message: "Horário pré-reservado! Falta apenas um passo." });
       setFormData({ nome: "", telefone: "", cpf: "", servico: procedimentos[0] });
-
-      // REMOVIDO: O setTimeout automático foi retirado para forçar o clique no botão do WhatsApp.
 
     } catch (error: any) {
       setStatus({ type: "error", message: error.message || "Erro ao confirmar. Tente novamente." });
@@ -243,6 +246,9 @@ export default function SchedulingForm() {
     setTimeout(() => nomeInputRef.current?.focus(), 50);
   };
 
+  const availableMonths = Array.from(new Set(slots.map((slot) => getMonthName(slot.date))));
+  const filteredSlots = slots.filter((slot) => getMonthName(slot.date) === selectedMonth);
+
   return (
     <section className="scheduling-shell" id="agendar">
       <div className="scheduling-header">
@@ -252,12 +258,28 @@ export default function SchedulingForm() {
 
       <div className="scheduling-grid">
         <div className="available-panel glass-panel">
-          <h3>Horários disponíveis</h3>
-          {slots.length === 0 ? (
-            <p className="empty-state">Nenhum horário disponível.</p>
+          <h3 style={{ margin: "0 0 14px 0" }}>Horários disponíveis</h3>
+
+          {availableMonths.length > 0 && (
+            <div className="month-filters">
+              {availableMonths.map((month) => (
+                <button
+                  key={month}
+                  type="button"
+                  onClick={() => setSelectedMonth(month)}
+                  className={`month-btn ${selectedMonth === month ? 'active' : ''}`}
+                >
+                  {month}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {filteredSlots.length === 0 ? (
+            <p className="empty-state">Nenhum horário disponível para {selectedMonth}.</p>
           ) : (
             <div className="slot-list">
-              {slots.map((slot) => (
+              {filteredSlots.map((slot) => (
                 <button
                   key={slot.id}
                   type="button"
@@ -381,7 +403,6 @@ export default function SchedulingForm() {
         <div
           className="popup-overlay"
           onClick={(e) => {
-            // NOVO: Fecha clicando fora APENAS se for erro OU se estiver na Etapa 2 (Agenda)
             if (e.target === e.currentTarget) {
               if (status.type === 'error' || (status.type === 'success' && popupStep === 2)) {
                 setStatus({ type: "idle", message: "" });
@@ -390,7 +411,6 @@ export default function SchedulingForm() {
           }}
         >
           <div className={`popup-content white-theme ${status.type}`}>
-
             <div className="status-icon-container">
               {status.type === 'error' && <div className="spinner-ring"></div>}
               <div className="status-icon">
@@ -400,15 +420,14 @@ export default function SchedulingForm() {
 
             <p>{status.type === 'success' && popupStep === 2 ? "Tudo certo! Para não esquecer, adicione à sua agenda:" : status.message}</p>
 
-            {/* ETAPA 1: OBRIGA O ENVIO DO WHATSAPP */}
             {status.type === 'success' && popupStep === 1 && (
               <button
                 type="button"
                 className="btn btn-primary"
                 style={{ width: "100%", marginTop: "10px", backgroundColor: "#25D366" }}
                 onClick={() => {
-                  window.open(waLinkStr, "_blank"); // Abre o WhatsApp
-                  setPopupStep(2); // Libera a agenda no retorno
+                  window.open(waLinkStr, "_blank");
+                  setPopupStep(2);
                 }}
               >
                 <i className="fa-brands fa-whatsapp" style={{ marginRight: '8px' }}></i>
@@ -416,7 +435,6 @@ export default function SchedulingForm() {
               </button>
             )}
 
-            {/* ETAPA 2: A RECOMPENSA (AGENDA NATIVA) */}
             {status.type === 'success' && popupStep === 2 && agendamentoConfirmado && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '10px' }}>
                 <button
@@ -426,7 +444,6 @@ export default function SchedulingForm() {
                 >
                   📅 Adicionar ao Calendário
                 </button>
-
                 <button
                   type="button"
                   className="btn btn-secondary"
@@ -437,7 +454,6 @@ export default function SchedulingForm() {
                 </button>
               </div>
             )}
-
           </div>
         </div>,
         document.body

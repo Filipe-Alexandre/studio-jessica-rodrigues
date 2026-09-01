@@ -147,7 +147,7 @@ export async function readAvailabilityFromSheet(): Promise<ScheduleSlot[]> {
           console.error("Erro ao analisar data do slot:", e);
         }
 
-        return true; 
+return true; 
       })
       .map((row) => ({
         id: String(row[0]).trim(),
@@ -155,7 +155,19 @@ export async function readAvailabilityFromSheet(): Promise<ScheduleSlot[]> {
         dayLabel: String(row[2]).trim(),
         time: String(row[3]).trim(),
         status: String(row[4]).trim(),
-      }));
+      }))
+      // NOVO: Ordenação cronológica rigorosa
+      .sort((a, b) => {
+        const [diaA, mesA, anoA] = a.date.split('/');
+        const [horaA, minutoA] = a.time.split(':');
+        const dataA = new Date(Number(anoA), Number(mesA) - 1, Number(diaA), Number(horaA), Number(minutoA)).getTime();
+
+        const [diaB, mesB, anoB] = b.date.split('/');
+        const [horaB, minutoB] = b.time.split(':');
+        const dataB = new Date(Number(anoB), Number(mesB) - 1, Number(diaB), Number(horaB), Number(minutoB)).getTime();
+
+        return dataA - dataB;
+      });
   } catch (error) {
     console.error("[readAvailabilityFromSheet] Erro:", error);
     return [];
