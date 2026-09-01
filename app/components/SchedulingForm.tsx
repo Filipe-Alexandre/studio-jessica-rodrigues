@@ -72,7 +72,7 @@ const getMonthName = (dateStr: string) => {
   if (Number(ano) === currentYear) {
     return monthStr;
   } else {
-    return `${monthStr} de ${ano.slice(-2)}`;
+    return `${monthStr}/${ano.slice(-2)}`;
   }
 };
 
