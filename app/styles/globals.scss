@@ -23,6 +23,7 @@
   --font-logo: "Brown Carolina", "Times New Roman", serif;
   --font-body: "Questrial", "Segoe UI", sans-serif;
 }
+
 /* #endregion */
 
 /* #region 2. Resets e Tipografia Global */
@@ -123,6 +124,7 @@ select {
   max-width: 700px;
   margin-bottom: 30px;
 }
+
 /* #endregion */
 
 /* #region 3. Utilitários e Componentes Globais */
@@ -238,14 +240,25 @@ main>.content-section:first-of-type {
 }
 
 @keyframes eyebrowGlow1 {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(40px, 15px) scale(1.4); }
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate(40px, 15px) scale(1.4);
+  }
 }
 
 @keyframes eyebrowGlow2 {
-  0% { transform: translate(0, 0) scale(1); }
-  100% { transform: translate(-40px, -15px) scale(1.4); }
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+
+  100% {
+    transform: translate(-40px, -15px) scale(1.4);
+  }
 }
+
 /* #endregion */
 
 /* #region 4. Cabeçalho (Header) */
@@ -321,6 +334,7 @@ main>.content-section:first-of-type {
 .main-nav a:hover {
   color: var(--primary-strong);
 }
+
 /* #endregion */
 
 /* #region 5. Seção: Hero */
@@ -476,6 +490,7 @@ main>.content-section:first-of-type {
   bottom: 26px;
   left: 28px;
 }
+
 /* #endregion */
 
 /* #region 6. Seção: Sobre */
@@ -547,6 +562,7 @@ main>.content-section:first-of-type {
   background: linear-gradient(135deg, var(--secondary-strong), var(--primary));
   box-shadow: 0 0 0 4px rgba(124, 99, 141, 0.1);
 }
+
 /* #endregion */
 
 /* #region 7. Seção: Procedimentos, Cards e Resultados */
@@ -643,6 +659,7 @@ main>.content-section:first-of-type {
   color: var(--muted);
   font-size: 0.82rem;
 }
+
 /* #endregion */
 
 /* #region 8. Seção: Agendamento e Formulário */
@@ -697,12 +714,14 @@ main>.content-section:first-of-type {
 }
 
 .month-filters::-webkit-scrollbar {
-  height: 4px; 
+  height: 4px;
 }
+
 .month-filters::-webkit-scrollbar-track {
   background: rgba(124, 99, 141, 0.08);
   border-radius: 4px;
 }
+
 .month-filters::-webkit-scrollbar-thumb {
   background: rgba(124, 99, 141, 0.35);
   border-radius: 4px;
@@ -991,10 +1010,22 @@ main>.content-section:first-of-type {
 }
 
 @keyframes btnLoadingBar {
-  0% { width: 0%; opacity: 1; }
-  80% { width: 100%; opacity: 1; }
-  100% { width: 100%; opacity: 0; }
+  0% {
+    width: 0%;
+    opacity: 1;
+  }
+
+  80% {
+    width: 100%;
+    opacity: 1;
+  }
+
+  100% {
+    width: 100%;
+    opacity: 0;
+  }
 }
+
 /* #endregion */
 
 /* #region 9. Popups e Animações de Status */
@@ -1028,9 +1059,33 @@ main>.content-section:first-of-type {
   animation: popIn 0.3s ease-out forwards;
 }
 
+/* Animação da Borda do Popup (10 Segundos) */
+.popup-border-rect {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: popBorderProgress 10s linear forwards;
+}
+
+@keyframes popBorderProgress {
+  from {
+    stroke-dashoffset: 100;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
 @keyframes popIn {
-  from { transform: scale(0.9); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 @property --progress {
@@ -1084,9 +1139,15 @@ main>.content-section:first-of-type {
 }
 
 @keyframes fillProgress {
-  0% { --progress: 0%; }
-  100% { --progress: 100%; }
+  0% {
+    --progress: 0%;
+  }
+
+  100% {
+    --progress: 100%;
+  }
 }
+
 /* #endregion */
 
 /* #region 10. Seção: Avaliações (Reviews) */
@@ -1174,6 +1235,7 @@ main>.content-section:first-of-type {
     }
   }
 }
+
 /* #endregion */
 
 /* #region 11. Seção: Contato, Rodapé e Mapa (Footer) */
@@ -1183,6 +1245,7 @@ main>.content-section:first-of-type {
 }
 
 .contato-icons {
+
   a,
   .contato-btn {
     border: 1px solid var(--primary);
@@ -1341,4 +1404,5 @@ main>.content-section:first-of-type {
   border: 1px solid var(--panel-border);
   box-shadow: 0 10px 30px var(--shadow);
 }
+
 /* #endregion */

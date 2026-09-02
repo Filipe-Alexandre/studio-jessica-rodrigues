@@ -51,13 +51,8 @@ DESCRIPTION:Seu momento de cuidado e bem-estar no ${STUDIO_NAME}.
 END:VEVENT
 END:VCALENDAR`;
 
-    // 1. Limpa a data (ex: de 15/08/2026 para 15-08-2026)
     const safeDate = dateStr.replace(/\//g, "-");
-    
-    // 2. Limpa o horário (ex: de 14:30 para 14h30)
     const safeTime = timeStr.replace(":", "h");
-    
-    // 3. Monta o nome do arquivo dinâmico
     const fileName = `Agendamento_${STUDIO_NAME.replace(/\s/g, "_")}_${safeDate}_${safeTime}.ics`;
 
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
@@ -65,9 +60,7 @@ END:VCALENDAR`;
     const link = document.createElement('a');
     link.href = url;
     
-    // Aplica o novo nome de arquivo
     link.setAttribute('download', fileName);
-    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -116,7 +109,8 @@ export default function SchedulingForm() {
     message: "",
   });
 
-  const [popupStep, setPopupStep] = useState<1 | 2>(1);
+  // Alterado para 3 passos para suportar o mapa
+  const [popupStep, setPopupStep] = useState<1 | 2 | 3>(1);
   const [agendamentoConfirmado, setAgendamentoConfirmado] = useState<{ servico: string, date: string, time: string } | null>(null);
   const [waLinkStr, setWaLinkStr] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -126,6 +120,7 @@ export default function SchedulingForm() {
     setIsMounted(true);
   }, []);
 
+  // Timer: Fecha popup de erro
   useEffect(() => {
     if (status.message && status.type === 'error') {
       const timer = setTimeout(() => {
@@ -134,6 +129,26 @@ export default function SchedulingForm() {
       return () => clearTimeout(timer);
     }
   }, [status.message, status.type]);
+
+  // Timer: Passo 2 (Agenda) -> Passo 3 (Mapa) - 10 SEGUNDOS
+  useEffect(() => {
+    if (status.type === 'success' && popupStep === 2) {
+      const timer = setTimeout(() => {
+        setPopupStep(3);
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [status.type, popupStep]);
+
+  // Timer: Passo 3 (Mapa) -> Fecha o Popup - 10 SEGUNDOS
+  useEffect(() => {
+    if (status.type === 'success' && popupStep === 3) {
+      const timer = setTimeout(() => {
+        setStatus({ type: "idle", message: "" });
+      }, 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [status.type, popupStep]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -419,13 +434,38 @@ export default function SchedulingForm() {
           className="popup-overlay"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              if (status.type === 'error' || (status.type === 'success' && popupStep === 2)) {
+              if (status.type === 'error' || (status.type === 'success' && popupStep === 3)) {
                 setStatus({ type: "idle", message: "" });
               }
             }
           }}
         >
-          <div className={`popup-content white-theme ${status.type}`}>
+          <div className={`popup-content white-theme ${status.type}`} style={{ position: 'relative' }}>
+            
+            {/* O SVG dinâmico da Borda (CSS no arquivo de estilos) */}
+            {(popupStep === 2 || popupStep === 3) && (
+              <svg
+                key={popupStep}
+                className="popup-border-svg"
+                style={{
+                  position: 'absolute', top: 0, left: 0,
+                  width: '100%', height: '100%',
+                  pointerEvents: 'none', borderRadius: '24px', zIndex: 10
+                }}
+              >
+                <rect
+                  x="2" y="2"
+                  width="calc(100% - 4px)" height="calc(100% - 4px)"
+                  rx="22" ry="22"
+                  fill="none"
+                  stroke="var(--primary)"
+                  strokeWidth="4"
+                  pathLength="100"
+                  className="popup-border-rect"
+                />
+              </svg>
+            )}
+
             <div className="status-icon-container">
               {status.type === 'error' && <div className="spinner-ring"></div>}
               <div className="status-icon">
@@ -433,7 +473,12 @@ export default function SchedulingForm() {
               </div>
             </div>
 
-            <p>{status.type === 'success' && popupStep === 2 ? "Tudo certo! Para não esquecer, adicione à sua agenda:" : status.message}</p>
+            <p>
+              {status.type === 'error' ? status.message :
+               popupStep === 1 ? status.message :
+               popupStep === 2 ? "Tudo certo! Para não esquecer, adicione à sua agenda:" :
+               "Prepare-se para seu momento de cuidado! Veja nossa localização:"}
+            </p>
 
             {status.type === 'success' && popupStep === 1 && (
               <button
@@ -461,14 +506,37 @@ export default function SchedulingForm() {
                 </button>
                 <button
                   type="button"
-                  className="btn btn-secondary"
-                  style={{ background: 'transparent', color: '#666', border: 'none', boxShadow: 'none' }}
-                  onClick={() => setStatus({ type: "idle", message: "" })}
+                  style={{ background: 'transparent', color: '#666', border: 'none', cursor: 'pointer', marginTop: '4px' }}
+                  onClick={() => setPopupStep(3)}
                 >
-                  Fechar Janela
+                  Pular
                 </button>
               </div>
             )}
+
+{/* ETAPA 3: LINK DO GOOGLE MAPS */}
+            {status.type === 'success' && popupStep === 3 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '10px' }}>
+                <a
+                  href="https://www.google.com/maps/search/?api=1&query=-23.5336266,-46.4917648"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary"
+                  style={{ textDecoration: 'none', width: '100%', display: 'inline-flex', justifyContent: 'center' }}
+                  onClick={() => setStatus({ type: "idle", message: "" })}
+                >
+                  📍 Ver como chegar
+                </a>
+                <button
+                  type="button"
+                  style={{ background: 'transparent', color: '#666', border: 'none', cursor: 'pointer', marginTop: '4px' }}
+                  onClick={() => setStatus({ type: "idle", message: "" })}
+                >
+                  Fechar janela
+                </button>
+              </div>
+            )}
+
           </div>
         </div>,
         document.body
