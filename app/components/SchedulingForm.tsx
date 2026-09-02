@@ -39,17 +39,7 @@ const generateICS = (servico: string, dateStr: string, timeStr: string) => {
     const endHora = String(Number(hora) + 2).padStart(2, '0');
     const endDate = `${ano}${mes}${dia}T${endHora}${minuto}00`;
 
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//${STUDIO_NAME}//Agendamento//PT
-BEGIN:VEVENT
-SUMMARY:Agendamento: ${servico}
-DTSTART;TZID=America/Sao_Paulo:${startDate}
-DTEND;TZID=America/Sao_Paulo:${endDate}
-LOCATION:${STUDIO_LOCATION}
-DESCRIPTION:Seu momento de cuidado e bem-estar no ${STUDIO_NAME}.
-END:VEVENT
-END:VCALENDAR`;
+    const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//${STUDIO_NAME}//Agendamento//PT\nBEGIN:VEVENT\nSUMMARY:Agendamento: ${servico}\nDTSTART;TZID=America/Sao_Paulo:${startDate}\nDTEND;TZID=America/Sao_Paulo:${endDate}\nLOCATION:${STUDIO_LOCATION}\nDESCRIPTION:Seu momento de cuidado e bem-estar no ${STUDIO_NAME}.\nEND:VEVENT\nEND:VCALENDAR`;
 
     const safeDate = dateStr.replace(/\//g, "-");
     const safeTime = timeStr.replace(":", "h");
@@ -91,6 +81,12 @@ export default function SchedulingForm() {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  // Estados dos Meus Horários
+  const [meusHorariosCpf, setMeusHorariosCpf] = useState("");
+  const [myBookings, setMyBookings] = useState<any[]>([]);
+  const [isSearchingBookings, setIsSearchingBookings] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+
   const nomeInputRef = useRef<HTMLInputElement>(null);
   const telefoneInputRef = useRef<HTMLInputElement>(null);
   const cpfInputRef = useRef<HTMLInputElement>(null);
@@ -109,7 +105,6 @@ export default function SchedulingForm() {
     message: "",
   });
 
-  // Alterado para 3 passos para suportar o mapa
   const [popupStep, setPopupStep] = useState<1 | 2 | 3>(1);
   const [agendamentoConfirmado, setAgendamentoConfirmado] = useState<{ servico: string, date: string, time: string } | null>(null);
   const [waLinkStr, setWaLinkStr] = useState<string>("");
@@ -120,7 +115,6 @@ export default function SchedulingForm() {
     setIsMounted(true);
   }, []);
 
-  // Timer: Fecha popup de erro
   useEffect(() => {
     if (status.message && status.type === 'error') {
       const timer = setTimeout(() => {
@@ -130,7 +124,6 @@ export default function SchedulingForm() {
     }
   }, [status.message, status.type]);
 
-  // Timer: Passo 2 (Agenda) -> Passo 3 (Mapa) - 10 SEGUNDOS
   useEffect(() => {
     if (status.type === 'success' && popupStep === 2) {
       const timer = setTimeout(() => {
@@ -140,7 +133,6 @@ export default function SchedulingForm() {
     }
   }, [status.type, popupStep]);
 
-  // Timer: Passo 3 (Mapa) -> Fecha o Popup - 10 SEGUNDOS
   useEffect(() => {
     if (status.type === 'success' && popupStep === 3) {
       const timer = setTimeout(() => {
@@ -150,26 +142,27 @@ export default function SchedulingForm() {
     }
   }, [status.type, popupStep]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch("/api/availability");
-        const data = await response.json();
-        const fetchedSlots = data.slots ?? [];
-        setSlots(fetchedSlots);
-        setProcedimentos(data.procedimentos ?? []);
+  const loadAvailability = async () => {
+    try {
+      const response = await fetch("/api/availability");
+      const data = await response.json();
+      const fetchedSlots = data.slots ?? [];
+      setSlots(fetchedSlots);
+      setProcedimentos(data.procedimentos ?? []);
 
-        if (data.procedimentos?.length > 0) {
-          setFormData(current => ({ ...current, servico: data.procedimentos[0] }));
-        }
-        if (fetchedSlots.length > 0) {
-          setSelectedMonth(getMonthName(fetchedSlots[0].date));
-        }
-      } catch {
-        setSlots([]);
+      if (data.procedimentos?.length > 0 && !formData.servico) {
+        setFormData(current => ({ ...current, servico: data.procedimentos[0] }));
       }
-    };
-    fetchData();
+      if (fetchedSlots.length > 0 && !selectedMonth) {
+        setSelectedMonth(getMonthName(fetchedSlots[0].date));
+      }
+    } catch {
+      setSlots([]);
+    }
+  };
+
+  useEffect(() => {
+    loadAvailability();
   }, []);
 
   useEffect(() => {
@@ -200,23 +193,96 @@ export default function SchedulingForm() {
     setFormData({ ...formData, cpf: value });
   };
 
+  const formatSearchCpf = (val: string) => {
+    let v = val.replace(/\D/g, "");
+    if (v.length > 11) v = v.slice(0, 11);
+    v = v.replace(/(\d{3})(\d)/, "$1.$2");
+    v = v.replace(/(\d{3})(\d)/, "$1.$2");
+    v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    return v;
+  };
+
+  const fetchMyBookings = async () => {
+    const cleanCpf = meusHorariosCpf.replace(/\D/g, "");
+    if (cleanCpf.length !== 11) {
+      alert("Digite um CPF válido com 11 dígitos para buscar.");
+      return;
+    }
+    setIsSearchingBookings(true);
+    try {
+      const res = await fetch(`/api/my-bookings?cpf=${cleanCpf}`);
+      const data = await res.json();
+      setMyBookings(data.bookings || []);
+      setHasSearched(true);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsSearchingBookings(false);
+    }
+  };
+
+  const handleCancelBooking = async (booking: any) => {
+    if (!confirm("Deseja realmente cancelar este horário?")) return;
+    setIsSearchingBookings(true);
+    try {
+      await fetch('/api/my-bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowIndex: booking.rowIndex })
+      });
+      await loadAvailability();
+      await fetchMyBookings();
+      
+      const msg = `Olá, gostaria de cancelar meu agendamento de ${booking.servico} no dia ${booking.date} às ${booking.time}.`;
+      window.open(`https://wa.me/${STUDIO_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao cancelar o agendamento.");
+    } finally {
+      setIsSearchingBookings(false);
+    }
+  };
+
+  const handleRescheduleBooking = async (booking: any) => {
+    if (!confirm("Isso cancelará o seu horário atual e preencherá o formulário para você escolher um novo. Deseja continuar?")) return;
+    setIsSearchingBookings(true);
+    try {
+      await fetch('/api/my-bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowIndex: booking.rowIndex })
+      });
+      
+      setFormData({
+        nome: booking.nome,
+        telefone: booking.telefone,
+        cpf: booking.cpf,
+        servico: booking.servico
+      });
+
+      await loadAvailability();
+      await fetchMyBookings();
+      
+      setStatus({ type: "success", message: "Horário anterior liberado! Selecione a nova data na lista e confirme seu agendamento." });
+      
+      const msg = `Olá, estou reagendando meu horário. O meu agendamento de ${booking.servico} do dia ${booking.date} às ${booking.time} foi cancelado, farei um novo pelo site.`;
+      window.open(`https://wa.me/${STUDIO_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
+      
+      window.scrollTo({ top: document.getElementById('agendar')?.offsetTop || 0, behavior: 'smooth' });
+    } catch (e) {
+      console.error(e);
+      alert("Erro ao reagendar.");
+    } finally {
+      setIsSearchingBookings(false);
+    }
+  };
+
   const handleBooking = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!selectedSlotId) {
-      setStatus({ type: "error", message: "Selecione um horário disponível." });
-      return;
-    }
-
-    if (!formData.nome.trim() || formData.telefone.replace(/\D/g, "").length < 10) {
-      setStatus({ type: "error", message: "Preencha o nome e um telefone válido." });
-      return;
-    }
-
-    if (!isValidCpf(formData.cpf)) {
-      setStatus({ type: "error", message: "Por favor, insira um CPF válido." });
-      return;
-    }
+    if (!selectedSlotId) return setStatus({ type: "error", message: "Selecione um horário disponível." });
+    if (!formData.nome.trim() || formData.telefone.replace(/\D/g, "").length < 10) return setStatus({ type: "error", message: "Preencha o nome e um telefone válido." });
+    if (!isValidCpf(formData.cpf)) return setStatus({ type: "error", message: "Por favor, insira um CPF válido." });
 
     const chosenSlot = slots.find((slot) => slot.id === selectedSlotId);
     if (!chosenSlot) return;
@@ -249,13 +315,7 @@ export default function SchedulingForm() {
         throw new Error(result.message || "Erro ao realizar agendamento.");
       }
 
-      const remainingSlots = slots.filter((slot) => slot.id !== selectedSlotId);
-      setSlots(remainingSlots);
-
-      const currentMonthStillHasSlots = remainingSlots.some(slot => getMonthName(slot.date) === selectedMonth);
-      if (!currentMonthStillHasSlots && remainingSlots.length > 0) {
-        setSelectedMonth(getMonthName(remainingSlots[0].date));
-      }
+      await loadAvailability(); 
 
       setSelectedSlotId("");
       setAgendamentoConfirmado({ servico: payload.servico, date: payload.date, time: payload.time });
@@ -287,8 +347,21 @@ export default function SchedulingForm() {
       </div>
 
       <div className="scheduling-grid">
-        <div className="available-panel glass-panel">
-          <h3 style={{ margin: "0 0 14px 0" }}>Horários disponíveis</h3>
+        
+        {/* PAINEL 1: COLUNA ESQUERDA (VAGAS) */}
+<div className="available-panel glass-panel">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+            <h3 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700, color: 'var(--foreground)', fontFamily: 'var(--font-display)' }}>
+              Horários disponíveis
+            </h3>
+            <button 
+              type="button" 
+              onClick={() => { loadAvailability(); fetchMyBookings(); }} 
+              className="btn-refresh"
+            >
+              🔄 Atualizar
+            </button>
+          </div>
 
           {availableMonths.length > 0 && (
             <div className="month-filters">
@@ -324,6 +397,7 @@ export default function SchedulingForm() {
           )}
         </div>
 
+        {/* PAINEL 2: COLUNA DIREITA (FORMULÁRIO) */}
         <form className="booking-form glass-panel" onSubmit={handleBooking}>
           <h3>Dados do cliente</h3>
 
@@ -427,6 +501,51 @@ export default function SchedulingForm() {
             {isLoading ? "Processando..." : "Confirmar agendamento"}
           </button>
         </form>
+
+        {/* PAINEL 3: MEUS HORÁRIOS (LARGURA TOTAL ABAIXO DOS DOIS PAINÉIS) */}
+        <div className="my-bookings-panel glass-panel">
+          <div className="my-bookings-header">
+            <h3>Meus horários</h3>
+          </div>
+
+          <div className="my-bookings-search">
+            <input
+              type="tel"
+              placeholder="Digite seu CPF..."
+              value={meusHorariosCpf}
+              onChange={(e) => setMeusHorariosCpf(formatSearchCpf(e.target.value))}
+            />
+            <button type="button" onClick={fetchMyBookings} className="btn-primary">
+              {isSearchingBookings ? "Buscando..." : "Buscar"}
+            </button>
+          </div>
+
+          {hasSearched && myBookings.length === 0 && (
+            <p className="empty-state" style={{textAlign: 'center', marginTop: '8px'}}>Nenhum horário reservado encontrado.</p>
+          )}
+
+          {myBookings.length > 0 && (
+            <div className="my-bookings-list">
+              {myBookings.map((b) => (
+                <div key={b.rowIndex} className="my-booking-card">
+                  <div className="my-booking-info">
+                    <strong>{b.date} às {b.time}</strong>
+                    <small>{b.servico}</small>
+                  </div>
+                  <div className="my-booking-actions">
+                    <button type="button" onClick={() => handleRescheduleBooking(b)} className="btn-action reschedule" title="Reagendar Horário">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    </button>
+                    <button type="button" onClick={() => handleCancelBooking(b)} className="btn-action cancel" title="Cancelar Horário">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
 
       {isMounted && status.message && createPortal(
@@ -442,7 +561,6 @@ export default function SchedulingForm() {
         >
           <div className={`popup-content white-theme ${status.type}`} style={{ position: 'relative' }}>
             
-            {/* O SVG dinâmico da Borda (CSS no arquivo de estilos) */}
             {(popupStep === 2 || popupStep === 3) && (
               <svg
                 key={popupStep}
@@ -514,11 +632,10 @@ export default function SchedulingForm() {
               </div>
             )}
 
-{/* ETAPA 3: LINK DO GOOGLE MAPS */}
             {status.type === 'success' && popupStep === 3 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '10px' }}>
                 <a
-                  href="https://maps.app.goo.gl/r7FvsXgSqtJ54cK89"
+                  href="https://www.google.com/maps/search/?api=1&query=-23.5336266,-46.4917648"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-primary"

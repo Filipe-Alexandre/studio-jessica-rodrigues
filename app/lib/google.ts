@@ -269,3 +269,65 @@ export async function checkActiveBooking(cpf: string, servico: string): Promise<
     return false;
   }
 }
+
+// --- ADICIONE ESTAS FUNÇÕES NO FINAL DO SEU ARQUIVO google.ts ---
+
+export async function getBookingsByCpf(cpf: string) {
+  if (!hasGoogleConfig()) return [];
+  try {
+    const auth = buildGoogleAuth();
+    if (!auth) return [];
+    
+    const { sheetId } = getGoogleCredentials();
+    const sheets = google.sheets({ version: "v4", auth });
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: sheetId!,
+      range: getSheetRange("Agendamentos", "A2:J"),
+    });
+
+    const rows = response.data.values || [];
+    const cleanInputCpf = cpf.replace(/\D/g, "");
+
+    return rows.map((row, index) => ({
+      rowIndex: index + 2, // A2 começa na linha 2 da planilha
+      id: String(row[0] || "").trim(),
+      date: String(row[1] || "").trim(),
+      dayLabel: String(row[2] || "").trim(),
+      time: String(row[3] || "").trim(),
+      status: String(row[4] || "").toLowerCase().trim(),
+      servico: String(row[5] || "").trim(),
+      nome: String(row[6] || "").trim(),
+      telefone: String(row[7] || "").trim(),
+      cpf: String(row[8] || "").trim()
+    })).filter(b => b.cpf.replace(/\D/g, "") === cleanInputCpf && b.status === "reservado");
+
+  } catch (error) {
+    console.error("Erro ao buscar agendamentos por CPF:", error);
+    return [];
+  }
+}
+
+export async function cancelBooking(rowIndex: number) {
+  if (!hasGoogleConfig()) return { ok: false };
+  try {
+    const auth = buildGoogleAuth();
+    if (!auth) return { ok: false };
+
+    const { sheetId } = getGoogleCredentials();
+    const sheets = google.sheets({ version: "v4", auth });
+
+    // Atualiza estritamente a célula da coluna E (Status) para "Cancelado"
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId!,
+      range: getSheetRange("Agendamentos", `E${rowIndex}`),
+      valueInputOption: "USER_ENTERED",
+      requestBody: { values: [["Cancelado"]] }
+    });
+    
+    return { ok: true };
+  } catch (error) {
+    console.error("Erro ao cancelar agendamento:", error);
+    return { ok: false };
+  }
+}
