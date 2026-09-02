@@ -39,46 +39,35 @@ const generateICS = (servico: string, dateStr: string, timeStr: string) => {
     const endHora = String(Number(hora) + 2).padStart(2, '0');
     const endDate = `${ano}${mes}${dia}T${endHora}${minuto}00`;
 
-    const icsContent = `BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//${STUDIO_NAME}//Agendamento//PT
-BEGIN:VEVENT
-SUMMARY:Agendamento: ${servico}
-DTSTART;TZID=America/Sao_Paulo:${startDate}
-DTEND;TZID=America/Sao_Paulo:${endDate}
-LOCATION:${STUDIO_LOCATION}
-DESCRIPTION:Seu momento de cuidado e bem-estar no ${STUDIO_NAME}.
-END:VEVENT
-END:VCALENDAR`;
+    // Detecção para identificar se a cliente está usando um iPhone/iPad
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-    // 1. Plano A: Tenta abrir a bandeja nativa (Exclusivo para Produção/HTTPS)
-    if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
-      const file = new File([icsContent], 'Agendamento.ics', { type: 'text/calendar' });
+    if (isIOS) {
+      // PLANO APPLE: O Safari intercepta o .ics e abre o Calendário Nativo na hora, sem "baixar" na pasta
+      const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//${STUDIO_NAME}//Agendamento//PT\nBEGIN:VEVENT\nSUMMARY:Agendamento: ${servico}\nDTSTART;TZID=America/Sao_Paulo:${startDate}\nDTEND;TZID=America/Sao_Paulo:${endDate}\nLOCATION:${STUDIO_LOCATION}\nDESCRIPTION:Seu momento de cuidado e bem-estar no ${STUDIO_NAME}.\nEND:VEVENT\nEND:VCALENDAR`;
+
+      const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Agendamento_${STUDIO_NAME.replace(/\s/g, "_")}.ics`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       
-      if (navigator.canShare({ files: [file] })) {
-        navigator.share({
-          files: [file],
-          title: 'Agendamento Confirmado',
-        }).catch((err) => console.log("Ação nativa cancelada.", err));
-        return; // Interrompe aqui se a bandeja abrir com sucesso
-      }
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    } else {
+      // PLANO ANDROID/PC: Pula o download de arquivo e abre o aplicativo Google Agenda via URL profunda
+      const title = encodeURIComponent(`Agendamento: ${servico}`);
+      const details = encodeURIComponent(`Seu momento de cuidado e bem-estar no ${STUDIO_NAME}.`);
+      const location = encodeURIComponent(STUDIO_LOCATION);
+
+      const googleCalendarUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startDate}/${endDate}&details=${details}&location=${location}`;
+
+      window.open(googleCalendarUrl, '_blank');
     }
-
-    // 2. Plano B: Força o download clássico do .ics (Funciona no Teste Local/HTTP e em PCs)
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Agendamento_${STUDIO_NAME.replace(/\s/g, "_")}.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    setTimeout(() => URL.revokeObjectURL(url), 100); // Limpa a memória
-
   } catch (error) {
     console.error("Erro ao gerar calendário", error);
-    alert("Ocorreu um erro ao gerar o convite do calendário.");
   }
 };
 
