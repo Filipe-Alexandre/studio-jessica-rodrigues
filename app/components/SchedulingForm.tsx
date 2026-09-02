@@ -34,6 +34,7 @@ const generateICS = (servico: string, dateStr: string, timeStr: string) => {
   try {
     const [dia, mes, ano] = dateStr.split('/');
     const [hora, minuto] = timeStr.split(':');
+    
     const startDate = `${ano}${mes}${dia}T${hora}${minuto}00`;
     const endHora = String(Number(hora) + 2).padStart(2, '0');
     const endDate = `${ano}${mes}${dia}T${endHora}${minuto}00`;
@@ -50,14 +51,27 @@ DESCRIPTION:Seu momento de cuidado e bem-estar no ${STUDIO_NAME}.
 END:VEVENT
 END:VCALENDAR`;
 
-    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `Agendamento_${STUDIO_NAME.replace(/\s/g, "_")}.ics`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const file = new File([icsContent], `Agendamento_${STUDIO_NAME.replace(/\s/g, "_")}.ics`, {
+      type: 'text/calendar;charset=utf-8',
+    });
+
+    // Tenta invocar a interface nativa do celular (Abre a bandeja do iOS/Android)
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({
+        files: [file],
+        title: 'Agendamento Confirmado',
+        text: 'Adicione este horário à sua agenda nativa.'
+      }).catch((err) => console.log("Ação cancelada pelo usuário.", err));
+    } else {
+      // Fallback silencioso para navegadores de computador
+      const url = URL.createObjectURL(file);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', file.name);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   } catch (error) {
     console.error("Erro ao gerar calendário", error);
   }
