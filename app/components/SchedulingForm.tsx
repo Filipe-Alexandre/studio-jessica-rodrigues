@@ -518,7 +518,7 @@ export default function SchedulingForm() {
             {status.type === 'success' && popupStep === 3 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '10px' }}>
                 <a
-                  href="https://www.google.com/maps/search/?api=1&query=-23.5336266,-46.4917648"
+                  href="https://maps.app.goo.gl/r7FvsXgSqtJ54cK89"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn btn-primary"
