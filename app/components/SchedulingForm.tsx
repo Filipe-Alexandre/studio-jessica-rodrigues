@@ -51,29 +51,34 @@ DESCRIPTION:Seu momento de cuidado e bem-estar no ${STUDIO_NAME}.
 END:VEVENT
 END:VCALENDAR`;
 
-    const file = new File([icsContent], `Agendamento_${STUDIO_NAME.replace(/\s/g, "_")}.ics`, {
-      type: 'text/calendar;charset=utf-8',
-    });
-
-    // Tenta invocar a interface nativa do celular (Abre a bandeja do iOS/Android)
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      navigator.share({
-        files: [file],
-        title: 'Agendamento Confirmado',
-        text: 'Adicione este horário à sua agenda nativa.'
-      }).catch((err) => console.log("Ação cancelada pelo usuário.", err));
-    } else {
-      // Fallback silencioso para navegadores de computador
-      const url = URL.createObjectURL(file);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', file.name);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+    // 1. Plano A: Tenta abrir a bandeja nativa (Exclusivo para Produção/HTTPS)
+    if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare) {
+      const file = new File([icsContent], 'Agendamento.ics', { type: 'text/calendar' });
+      
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({
+          files: [file],
+          title: 'Agendamento Confirmado',
+        }).catch((err) => console.log("Ação nativa cancelada.", err));
+        return; // Interrompe aqui se a bandeja abrir com sucesso
+      }
     }
+
+    // 2. Plano B: Força o download clássico do .ics (Funciona no Teste Local/HTTP e em PCs)
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `Agendamento_${STUDIO_NAME.replace(/\s/g, "_")}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    setTimeout(() => URL.revokeObjectURL(url), 100); // Limpa a memória
+
   } catch (error) {
     console.error("Erro ao gerar calendário", error);
+    alert("Ocorreu um erro ao gerar o convite do calendário.");
   }
 };
 
