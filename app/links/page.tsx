@@ -38,20 +38,18 @@ export default function LinksPage() {
         {/* Lista de Links */}
         <nav className="links-list">
           
-          <button 
+          <a 
+            href="/#agendar" 
+            target="_blank" 
+            rel="noopener noreferrer" 
             className="link-item glass-panel"
-            style={{ cursor: "pointer", width: "100%", border: "1px solid rgba(124, 99, 141, 0.15)", background: "transparent", textAlign: "left" }}
-            onClick={(e) => {
-              e.preventDefault();
-              window.location.href = "/#agendar"; 
-            }}
           >
             <div className="link-icon">
               <i className="fa-regular fa-calendar-check"></i>
             </div>
             <span className="link-text">Agendamento Online</span>
             <i className="fa-solid fa-chevron-right link-arrow"></i>
-          </button>
+          </a>
 
           <a href={`https://wa.me/${STUDIO_PHONE}`} target="_blank" rel="noopener noreferrer" className="link-item glass-panel">
             <div className="link-icon">
