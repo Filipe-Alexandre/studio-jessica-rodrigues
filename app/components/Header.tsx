@@ -26,7 +26,16 @@ export default function Header() {
         ))}
       </nav>
 
-      <Link className="btn btn-primary" href="/#agendar">
+<Link 
+        className="btn btn-primary" 
+        href="/#agendar"
+        onClick={(e) => {
+          if (window.location.pathname === '/') {
+            e.preventDefault();
+            document.getElementById('agendar')?.scrollIntoView({ behavior: 'smooth' });
+          }
+        }}
+      >
         Agendar
       </Link>
     </header>
