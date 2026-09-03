@@ -1,7 +1,10 @@
+import Link from "next/link";
+
 const navItems = [
-  { label: "Sobre", href: "#sobre" },
-  { label: "Procedimentos", href: "#procedimentos" },
-  { label: "Contato", href: "#contato" },
+  { label: "Links", href: "/links" },
+  { label: "Sobre", href: "/#sobre" },
+  { label: "Procedimentos", href: "/#procedimentos" },
+  { label: "Contato", href: "/#contato" },
 ];
 
 export default function Header() {
@@ -17,15 +20,15 @@ export default function Header() {
 
       <nav className="main-nav" aria-label="Navegação principal">
         {navItems.map((item) => (
-          <a key={item.label} href={item.href}>
+          <Link key={item.label} href={item.href}>
             {item.label}
-          </a>
+          </Link>
         ))}
       </nav>
 
-      <a className="btn btn-primary" href="#agendar ">
+      <Link className="btn btn-primary" href="/#agendar">
         Agendar
-      </a>
+      </Link>
     </header>
   );
 }
