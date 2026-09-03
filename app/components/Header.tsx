@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 
 const navItems = [
@@ -26,17 +28,33 @@ export default function Header() {
         ))}
       </nav>
 
-<span 
+      {/* Botão corrigido sem a tag span e focado inteiramente no cálculo de eixo Y */}
+      <button 
         className="btn btn-primary" 
-        onClick={(e) => {
+        style={{ cursor: 'pointer' }} 
+        onClick={() => {
           if (window.location.pathname === '/') {
-            e.preventDefault();
-            document.getElementById('agendar')?.scrollIntoView({ behavior: 'smooth' });
+            const secao = document.getElementById('agendar');
+
+            if (secao) {
+              // 1. Calcula a distância da seção até o topo da tela
+              // 2. Adiciona o scrollY atual para obter a posição absoluta (Altura Y)
+              // 3. Subtrai 120px para compensar a altura do seu cabeçalho fixo
+              const alturaY = secao.getBoundingClientRect().top + window.scrollY - 120;
+
+              window.scrollTo({
+                top: alturaY,
+                behavior: 'smooth'
+              });
+            }
+          } else {
+            // Se a cliente estiver na página "/links", força o redirecionamento
+            window.location.href = '/#agendar';
           }
         }}
       >
         Agendar
-      </span>
+      </button>
     </header>
   );
 }

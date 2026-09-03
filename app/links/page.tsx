@@ -3,8 +3,6 @@
 import React from "react";
 import { STUDIO_NAME, STUDIO_PHONE, STUDIO_INSTAGRAM } from "../lib/config";
 
-export const dynamic = "force-dynamic";
-
 export default function LinksPage() {
   return (
     <main className="links-page-wrapper">
@@ -40,10 +38,9 @@ export default function LinksPage() {
         {/* Lista de Links */}
         <nav className="links-list">
           
-          {/* Bloqueio de Cache do Instagram aplicado no onClick */}
-          <a 
-            href="/#agendar" 
+          <button 
             className="link-item glass-panel"
+            style={{ cursor: "pointer", width: "100%", border: "1px solid rgba(124, 99, 141, 0.15)", background: "transparent", textAlign: "left" }}
             onClick={(e) => {
               e.preventDefault();
               window.location.href = "/#agendar"; 
@@ -54,7 +51,7 @@ export default function LinksPage() {
             </div>
             <span className="link-text">Agendamento Online</span>
             <i className="fa-solid fa-chevron-right link-arrow"></i>
-          </a>
+          </button>
 
           <a href={`https://wa.me/${STUDIO_PHONE}`} target="_blank" rel="noopener noreferrer" className="link-item glass-panel">
             <div className="link-icon">
