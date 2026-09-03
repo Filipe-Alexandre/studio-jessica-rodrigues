@@ -1,5 +1,9 @@
+"use client";
+
 import React from "react";
 import { STUDIO_NAME, STUDIO_PHONE, STUDIO_INSTAGRAM } from "../lib/config";
+
+export const dynamic = "force-dynamic";
 
 export default function LinksPage() {
   return (
@@ -9,6 +13,7 @@ export default function LinksPage() {
       <div className="bg-lirio-footer"></div>
 
       <section className="links-container">
+        
         <header className="links-header">
           <div className="links-cover glass-panel">
             <img 
@@ -34,7 +39,16 @@ export default function LinksPage() {
 
         {/* Lista de Links */}
         <nav className="links-list">
-          <a href="/#agendar" className="link-item glass-panel">
+          
+          {/* Bloqueio de Cache do Instagram aplicado no onClick */}
+          <a 
+            href="/#agendar" 
+            className="link-item glass-panel"
+            onClick={(e) => {
+              e.preventDefault();
+              window.location.href = "/#agendar"; 
+            }}
+          >
             <div className="link-icon">
               <i className="fa-regular fa-calendar-check"></i>
             </div>

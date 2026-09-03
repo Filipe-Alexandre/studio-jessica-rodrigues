@@ -26,9 +26,8 @@ export default function Header() {
         ))}
       </nav>
 
-<Link 
+<span 
         className="btn btn-primary" 
-        href="/#agendar"
         onClick={(e) => {
           if (window.location.pathname === '/') {
             e.preventDefault();
@@ -37,7 +36,7 @@ export default function Header() {
         }}
       >
         Agendar
-      </Link>
+      </span>
     </header>
   );
 }
