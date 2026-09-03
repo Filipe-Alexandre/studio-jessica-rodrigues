@@ -40,7 +40,7 @@ export default function Header() {
               // 1. Calcula a distância da seção até o topo da tela
               // 2. Adiciona o scrollY atual para obter a posição absoluta (Altura Y)
               // 3. Subtrai 120px para compensar a altura do seu cabeçalho fixo
-              const alturaY = secao.getBoundingClientRect().top + window.scrollY - 120;
+              const alturaY = secao.getBoundingClientRect().top + window.scrollY;
 
               window.scrollTo({
                 top: alturaY,
