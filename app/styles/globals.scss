@@ -857,6 +857,28 @@ main>.content-section:first-of-type {
   transform: translateY(-1px);
 }
 
+.btn-icon-refresh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(124, 99, 141, 0.1);
+  color: var(--primary-strong);
+  border: 1px solid rgba(124, 99, 141, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.1rem;
+}
+
+.btn-icon-refresh:hover {
+  background: var(--primary);
+  color: #fff;
+  transform: rotate(45deg);
+  box-shadow: 0 4px 10px rgba(124, 99, 141, 0.25);
+}
+
 .my-bookings-search {
   display: flex;
   gap: 10px;

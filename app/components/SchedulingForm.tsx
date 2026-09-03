@@ -81,7 +81,6 @@ export default function SchedulingForm() {
   const [selectedMonth, setSelectedMonth] = useState<string>("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Estados dos Meus Horários
   const [meusHorariosCpf, setMeusHorariosCpf] = useState("");
   const [myBookings, setMyBookings] = useState<any[]>([]);
   const [isSearchingBookings, setIsSearchingBookings] = useState(false);
@@ -100,10 +99,19 @@ export default function SchedulingForm() {
     servico: "",
   });
 
-  const [status, setStatus] = useState<{ type: "idle" | "success" | "error"; message: string }>({
+  const [status, setStatus] = useState<{ type: "idle" | "success" | "error" | "info"; message: string }>({
     type: "idle",
     message: "",
   });
+
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    text: string;
+    confirmText: string;
+    confirmColor: string;
+    onConfirm: () => void;
+  } | null>(null);
 
   const [popupStep, setPopupStep] = useState<1 | 2 | 3>(1);
   const [agendamentoConfirmado, setAgendamentoConfirmado] = useState<{ servico: string, date: string, time: string } | null>(null);
@@ -115,8 +123,9 @@ export default function SchedulingForm() {
     setIsMounted(true);
   }, []);
 
+  // Timer: Fecha popup de erro ou informação nativa (5 segundos)
   useEffect(() => {
-    if (status.message && status.type === 'error') {
+    if (status.message && (status.type === 'error' || status.type === 'info')) {
       const timer = setTimeout(() => {
         setStatus({ type: "idle", message: "" });
       }, 5000);
@@ -124,6 +133,7 @@ export default function SchedulingForm() {
     }
   }, [status.message, status.type]);
 
+  // Timer: Passo 2 (Agenda) -> Passo 3 (Mapa) - 10 SEGUNDOS
   useEffect(() => {
     if (status.type === 'success' && popupStep === 2) {
       const timer = setTimeout(() => {
@@ -133,6 +143,7 @@ export default function SchedulingForm() {
     }
   }, [status.type, popupStep]);
 
+  // Timer: Passo 3 (Mapa) -> Fecha o Popup - 10 SEGUNDOS
   useEffect(() => {
     if (status.type === 'success' && popupStep === 3) {
       const timer = setTimeout(() => {
@@ -144,7 +155,9 @@ export default function SchedulingForm() {
 
   const loadAvailability = async () => {
     try {
-      const response = await fetch("/api/availability");
+      const response = await fetch(`/api/availability?t=${Date.now()}`);
+      if (!response.ok) return;
+
       const data = await response.json();
       const fetchedSlots = data.slots ?? [];
       setSlots(fetchedSlots);
@@ -205,76 +218,95 @@ export default function SchedulingForm() {
   const fetchMyBookings = async () => {
     const cleanCpf = meusHorariosCpf.replace(/\D/g, "");
     if (cleanCpf.length !== 11) {
-      alert("Digite um CPF válido com 11 dígitos para buscar.");
+      setStatus({ type: "error", message: "Digite um CPF válido com 11 dígitos para buscar." });
       return;
     }
     setIsSearchingBookings(true);
     try {
-      const res = await fetch(`/api/my-bookings?cpf=${cleanCpf}`);
+      const res = await fetch(`/api/my-bookings?cpf=${cleanCpf}&t=${Date.now()}`);
+      if (!res.ok) {
+        setStatus({ type: "error", message: "Erro ao buscar no servidor. Tente novamente." });
+        return;
+      }
       const data = await res.json();
       setMyBookings(data.bookings || []);
       setHasSearched(true);
     } catch (error) {
       console.error(error);
+      setStatus({ type: "error", message: "Falha ao buscar agendamentos." });
     } finally {
       setIsSearchingBookings(false);
     }
   };
 
-  const handleCancelBooking = async (booking: any) => {
-    if (!confirm("Deseja realmente cancelar este horário?")) return;
-    setIsSearchingBookings(true);
-    try {
-      await fetch('/api/my-bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: booking.rowIndex })
-      });
-      await loadAvailability();
-      await fetchMyBookings();
-      
-      const msg = `Olá, gostaria de cancelar meu agendamento de ${booking.servico} no dia ${booking.date} às ${booking.time}.`;
-      window.open(`https://wa.me/${STUDIO_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
-    } catch (e) {
-      console.error(e);
-      alert("Erro ao cancelar o agendamento.");
-    } finally {
-      setIsSearchingBookings(false);
-    }
+  const handleCancelBooking = (booking: any) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Cancelar Horário",
+      text: `Deseja realmente cancelar o seu agendamento de ${booking.servico}?`,
+      confirmText: "Sim, Cancelar",
+      confirmColor: "#DC3545",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setIsSearchingBookings(true);
+        try {
+          await fetch('/api/my-bookings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rowIndex: booking.rowIndex })
+          });
+          await loadAvailability();
+          await fetchMyBookings();
+          
+          const msg = `Olá, gostaria de cancelar meu agendamento de ${booking.servico} no dia ${booking.date} às ${booking.time}.`;
+          window.open(`https://wa.me/${STUDIO_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
+        } catch (e) {
+          console.error(e);
+          setStatus({ type: "error", message: "Erro ao cancelar o agendamento." });
+        } finally {
+          setIsSearchingBookings(false);
+        }
+      }
+    });
   };
 
-  const handleRescheduleBooking = async (booking: any) => {
-    if (!confirm("Isso cancelará o seu horário atual e preencherá o formulário para você escolher um novo. Deseja continuar?")) return;
-    setIsSearchingBookings(true);
-    try {
-      await fetch('/api/my-bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rowIndex: booking.rowIndex })
-      });
-      
-      setFormData({
-        nome: booking.nome,
-        telefone: booking.telefone,
-        cpf: booking.cpf,
-        servico: booking.servico
-      });
+  const handleRescheduleBooking = (booking: any) => {
+    setConfirmModal({
+      isOpen: true,
+      title: "Reagendar Horário",
+      text: "Isso cancelará o seu horário atual e preparará o formulário para você escolher um novo. Deseja continuar?",
+      confirmText: "Sim, Reagendar",
+      confirmColor: "var(--primary)",
+      onConfirm: async () => {
+        setConfirmModal(null);
+        setIsSearchingBookings(true);
+        try {
+          await fetch('/api/my-bookings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rowIndex: booking.rowIndex })
+          });
+          
+          setFormData({
+            nome: booking.nome,
+            telefone: booking.telefone,
+            cpf: booking.cpf,
+            servico: booking.servico
+          });
 
-      await loadAvailability();
-      await fetchMyBookings();
-      
-      setStatus({ type: "success", message: "Horário anterior liberado! Selecione a nova data na lista e confirme seu agendamento." });
-      
-      const msg = `Olá, estou reagendando meu horário. O meu agendamento de ${booking.servico} do dia ${booking.date} às ${booking.time} foi cancelado, farei um novo pelo site.`;
-      window.open(`https://wa.me/${STUDIO_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
-      
-      window.scrollTo({ top: document.getElementById('agendar')?.offsetTop || 0, behavior: 'smooth' });
-    } catch (e) {
-      console.error(e);
-      alert("Erro ao reagendar.");
-    } finally {
-      setIsSearchingBookings(false);
-    }
+          await loadAvailability();
+          await fetchMyBookings();
+          
+          setStatus({ type: "info", message: "Horário liberado! Escolha a nova data acima e confirme seu reagendamento." });
+          window.scrollTo({ top: document.getElementById('agendar')?.offsetTop || 0, behavior: 'smooth' });
+        } catch (e) {
+          console.error(e);
+          setStatus({ type: "error", message: "Erro ao reagendar." });
+        } finally {
+          setIsSearchingBookings(false);
+        }
+      }
+    });
   };
 
   const handleBooking = async (event: FormEvent<HTMLFormElement>) => {
@@ -348,56 +380,59 @@ export default function SchedulingForm() {
 
       <div className="scheduling-grid">
         
-        {/* PAINEL 1: COLUNA ESQUERDA (VAGAS) */}
-<div className="available-panel glass-panel">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
-            <h3 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700, color: 'var(--foreground)', fontFamily: 'var(--font-display)' }}>
-              Horários disponíveis
-            </h3>
-            <button 
-              type="button" 
-              onClick={() => { loadAvailability(); fetchMyBookings(); }} 
-              className="btn-refresh"
-            >
-              🔄 Atualizar
-            </button>
+        {/* COLUNA ESQUERDA (VAGAS) */}
+        <div className="left-column-wrapper">
+          <div className="available-panel glass-panel">
+            <div className="available-header-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700, color: 'var(--foreground)', fontFamily: 'var(--font-display)' }}>
+                Horários disponíveis
+              </h3>
+              <button 
+                type="button" 
+                onClick={loadAvailability} 
+                className="btn-icon-refresh"
+                title="Atualizar horários"
+              >
+                <i className="fa-solid fa-rotate-right"></i>
+              </button>
+            </div>
+
+            {availableMonths.length > 0 && (
+              <div className="month-filters">
+                {availableMonths.map((month) => (
+                  <button
+                    key={month}
+                    type="button"
+                    onClick={() => setSelectedMonth(month)}
+                    className={`month-btn ${selectedMonth === month ? 'active' : ''}`}
+                  >
+                    {month}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {filteredSlots.length === 0 ? (
+              <p className="empty-state">Nenhum horário disponível para {selectedMonth}.</p>
+            ) : (
+              <div className="slot-list">
+                {filteredSlots.map((slot) => (
+                  <button
+                    key={slot.id}
+                    type="button"
+                    className={`slot-card ${selectedSlotId === slot.id ? "selected" : ""}`}
+                    onClick={() => handleSlotSelection(slot.id)}
+                  >
+                    <span className="slot-date">{slot.dayLabel} - {slot.date}</span>
+                    <strong>{slot.time}</strong>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-
-          {availableMonths.length > 0 && (
-            <div className="month-filters">
-              {availableMonths.map((month) => (
-                <button
-                  key={month}
-                  type="button"
-                  onClick={() => setSelectedMonth(month)}
-                  className={`month-btn ${selectedMonth === month ? 'active' : ''}`}
-                >
-                  {month}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {filteredSlots.length === 0 ? (
-            <p className="empty-state">Nenhum horário disponível para {selectedMonth}.</p>
-          ) : (
-            <div className="slot-list">
-              {filteredSlots.map((slot) => (
-                <button
-                  key={slot.id}
-                  type="button"
-                  className={`slot-card ${selectedSlotId === slot.id ? "selected" : ""}`}
-                  onClick={() => handleSlotSelection(slot.id)}
-                >
-                  <span className="slot-date">{slot.dayLabel} - {slot.date}</span>
-                  <strong>{slot.time}</strong>
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
-        {/* PAINEL 2: COLUNA DIREITA (FORMULÁRIO) */}
+        {/* COLUNA DIREITA (FORMULÁRIO) */}
         <form className="booking-form glass-panel" onSubmit={handleBooking}>
           <h3>Dados do cliente</h3>
 
@@ -502,7 +537,7 @@ export default function SchedulingForm() {
           </button>
         </form>
 
-        {/* PAINEL 3: MEUS HORÁRIOS (LARGURA TOTAL ABAIXO DOS DOIS PAINÉIS) */}
+        {/* MEUS HORÁRIOS (LARGURA TOTAL) */}
         <div className="my-bookings-panel glass-panel">
           <div className="my-bookings-header">
             <h3>Meus horários</h3>
@@ -514,8 +549,15 @@ export default function SchedulingForm() {
               placeholder="Digite seu CPF..."
               value={meusHorariosCpf}
               onChange={(e) => setMeusHorariosCpf(formatSearchCpf(e.target.value))}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  fetchMyBookings();
+                }
+              }}
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--foreground)', fontSize: '0.95rem' }}
             />
-            <button type="button" onClick={fetchMyBookings} className="btn-primary">
+            <button type="button" onClick={fetchMyBookings} className="btn-primary" style={{ padding: '0.6rem 1.4rem', borderRadius: '999px', fontSize: '0.9rem', minWidth: '100px', cursor: 'pointer' }}>
               {isSearchingBookings ? "Buscando..." : "Buscar"}
             </button>
           </div>
@@ -534,10 +576,10 @@ export default function SchedulingForm() {
                   </div>
                   <div className="my-booking-actions">
                     <button type="button" onClick={() => handleRescheduleBooking(b)} className="btn-action reschedule" title="Reagendar Horário">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                      <i className="fa-regular fa-clock" style={{ fontSize: '1.2rem' }}></i>
                     </button>
                     <button type="button" onClick={() => handleCancelBooking(b)} className="btn-action cancel" title="Cancelar Horário">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      <i className="fa-solid fa-xmark" style={{ fontSize: '1.2rem' }}></i>
                     </button>
                   </div>
                 </div>
@@ -548,12 +590,41 @@ export default function SchedulingForm() {
 
       </div>
 
+      {/* MODAL DE CONFIRMAÇÃO (Cancelar / Reagendar) */}
+      {isMounted && confirmModal && createPortal(
+        <div className="popup-overlay" onClick={() => setConfirmModal(null)}>
+          <div className="popup-content white-theme" onClick={e => e.stopPropagation()} style={{ padding: "32px", gap: "16px" }}>
+            <h3 style={{ margin: 0, fontSize: "1.6rem", color: "var(--foreground)", fontFamily: "var(--font-display)", fontWeight: "bold" }}>{confirmModal.title}</h3>
+            <p style={{ margin: 0, color: "var(--muted)", fontSize: "0.95rem" }}>{confirmModal.text}</p>
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", width: "100%", marginTop: "10px" }}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                style={{ background: confirmModal.confirmColor, borderColor: confirmModal.confirmColor, width: "100%", cursor: 'pointer' }}
+                onClick={confirmModal.onConfirm}
+              >
+                {confirmModal.confirmText}
+              </button>
+              <button
+                type="button"
+                style={{ background: "transparent", color: "var(--muted)", border: "none", cursor: "pointer", padding: "8px" }}
+                onClick={() => setConfirmModal(null)}
+              >
+                Voltar
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* POPUP DE STATUS / INFORMAÇÃO / 3 PASSOS */}
       {isMounted && status.message && createPortal(
         <div
           className="popup-overlay"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              if (status.type === 'error' || (status.type === 'success' && popupStep === 3)) {
+              if (status.type === 'error' || status.type === 'info' || (status.type === 'success' && popupStep === 3)) {
                 setStatus({ type: "idle", message: "" });
               }
             }
@@ -561,9 +632,10 @@ export default function SchedulingForm() {
         >
           <div className={`popup-content white-theme ${status.type}`} style={{ position: 'relative' }}>
             
-            {(popupStep === 2 || popupStep === 3) && (
+            {/* Adicionada a borda para o status "info" com 5 segundos */}
+            {((status.type === 'success' && (popupStep === 2 || popupStep === 3)) || status.type === 'info') && (
               <svg
-                key={popupStep}
+                key={status.type === 'info' ? 'info' : popupStep}
                 className="popup-border-svg"
                 style={{
                   position: 'absolute', top: 0, left: 0,
@@ -580,19 +652,22 @@ export default function SchedulingForm() {
                   strokeWidth="4"
                   pathLength="100"
                   className="popup-border-rect"
+                  style={status.type === 'info' ? { animationDuration: '5s' } : undefined}
                 />
               </svg>
             )}
 
             <div className="status-icon-container">
-              {status.type === 'error' && <div className="spinner-ring"></div>}
-              <div className="status-icon">
-                {status.type === 'error' ? '✖' : '✔'}
+              {(status.type === 'error' || status.type === 'info') && (
+                <div className="spinner-ring" style={{ borderColor: status.type === 'error' ? 'rgba(255, 77, 79, 0.8)' : 'var(--primary)' }}></div>
+              )}
+              <div className="status-icon" style={{ color: status.type === 'error' ? '#ff4d4f' : 'var(--primary)' }}>
+                {status.type === 'error' ? '✖' : status.type === 'info' ? 'ℹ' : '✔'}
               </div>
             </div>
 
             <p>
-              {status.type === 'error' ? status.message :
+              {(status.type === 'error' || status.type === 'info') ? status.message :
                popupStep === 1 ? status.message :
                popupStep === 2 ? "Tudo certo! Para não esquecer, adicione à sua agenda:" :
                "Prepare-se para seu momento de cuidado! Veja nossa localização:"}

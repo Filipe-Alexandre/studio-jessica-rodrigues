@@ -213,6 +213,31 @@
   .footer-links {
     justify-content: center;
   }
+
+  .my-bookings-panel {
+    padding: 20px 16px;
+  }
+  .my-bookings-header h3 {
+    font-size: 1.4rem;
+  }
+  .my-bookings-search {
+    flex-direction: column;
+    border-radius: 16px;
+    padding: 12px;
+  }
+  .my-bookings-search button {
+    width: 100%;
+    margin-top: 8px;
+  }
+  .my-booking-card {
+    flex-direction: column;
+    gap: 14px;
+    text-align: center;
+  }
+  .my-booking-actions {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 /* =========================================

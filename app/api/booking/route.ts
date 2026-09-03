@@ -11,11 +11,12 @@ export async function POST(request: Request) {
     }
 
     // 2. A Trava de Segurança
-    const temAgendamentoAtivo = await checkActiveBooking(payload.cpf, payload.servico);
+// 2. A Trava de Segurança Mensal
+    const temAgendamentoAtivo = await checkActiveBooking(payload.cpf, payload.servico, payload.date);
 
     if (temAgendamentoAtivo) {
       return NextResponse.json(
-        { message: `Você já possui um agendamento ativo para o serviço de ${payload.servico}.` },
+        { message: `Você já possui um agendamento ativo de ${payload.servico} neste mês.` },
         { status: 409 }
       );
     }

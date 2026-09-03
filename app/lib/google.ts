@@ -234,7 +234,7 @@ export async function createCalendarEvent(payload: BookingPayload) {
   }
 }
 
-export async function checkActiveBooking(cpf: string, servico: string): Promise<boolean> {
+export async function checkActiveBooking(cpf: string, servico: string, dataAgendamento: string): Promise<boolean> {
   if (!hasGoogleConfig()) return false;
 
   try {
@@ -250,11 +250,15 @@ export async function checkActiveBooking(cpf: string, servico: string): Promise<
     });
 
     const rows = response.data.values || [];
+    const [diaNovo, mesNovo, anoNovo] = dataAgendamento.split('/');
 
     return rows.some((row: any[]) => {
       const rowStatus = String(row[4] || "").trim().toLowerCase();
       const rowServico = String(row[5] || "").trim().toLowerCase();
       const rowCpf = String(row[8] || "").trim();
+      
+      const rowDate = String(row[1] || "").trim();
+      const [rowDia, rowMes, rowAno] = rowDate.split('/');
 
       const cleanRowCpf = rowCpf.replace(/\D/g, "");
       const cleanInputCpf = cpf.replace(/\D/g, "");
@@ -262,7 +266,9 @@ export async function checkActiveBooking(cpf: string, servico: string): Promise<
 
       return cleanRowCpf === cleanInputCpf && 
              rowStatus === "reservado" && 
-             rowServico === cleanInputServico;
+             rowServico === cleanInputServico &&
+             rowMes === mesNovo && 
+             rowAno === anoNovo;
     });
   } catch (error) {
     console.error("Erro ao verificar CPF ativo na planilha:", error);
