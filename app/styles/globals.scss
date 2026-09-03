@@ -1684,11 +1684,29 @@ body:has(.links-page-wrapper)::before {
 
 .links-cover {
   width: 100%;
-  height: 160px;
+  height: 200px; 
   border-radius: 32px;
   overflow: hidden;
   position: relative;
   padding: 0;
+}
+
+.links-cover::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent 50%, rgba(0, 0, 0, 0.3) 100%);
+  pointer-events: none; /* Garante que a sombra não bloqueie toques/cliques */
+}
+
+.cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center center; 
 }
 
 .cover-img {
