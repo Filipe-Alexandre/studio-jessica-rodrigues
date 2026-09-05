@@ -202,7 +202,6 @@ export async function appendBookingToSheet(payload: BookingPayload) {
   }
 }
 
-// CORREÇÃO: Crases (Template Literals) restauradas
 export async function createCalendarEvent(payload: BookingPayload) {
   if (!hasGoogleConfig()) return { ok: true };
 
@@ -276,8 +275,6 @@ export async function checkActiveBooking(cpf: string, servico: string, dataAgend
   }
 }
 
-// --- ADICIONE ESTAS FUNÇÕES NO FINAL DO SEU ARQUIVO google.ts ---
-
 export async function getBookingsByCpf(cpf: string) {
   if (!hasGoogleConfig()) return [];
   try {
@@ -334,6 +331,77 @@ export async function cancelBooking(rowIndex: number) {
     return { ok: true };
   } catch (error) {
     console.error("Erro ao cancelar agendamento:", error);
+    return { ok: false };
+  }
+}
+
+export async function deleteCalendarEvent(dateStr: string, timeStr: string, cpf: string) {
+  if (!hasGoogleConfig()) return { ok: false };
+
+  try {
+    const auth = buildGoogleAuth();
+    if (!auth) return { ok: false };
+
+    const calendar = google.calendar({ version: "v3", auth });
+    const calendarId = process.env.GOOGLE_CALENDAR_ID ?? "primary";
+
+    // Garante que temos um CPF limpo para procurar
+    const cleanInputCpf = cpf ? cpf.replace(/\D/g, "") : "";
+    if (!cleanInputCpf) {
+      console.log("Cancelamento falhou: CPF não chegou ao servidor.");
+      return { ok: false };
+    }
+
+    const [dia, mes, ano] = dateStr.split('/');
+    const eventTime = new Date(`${ano}-${mes}-${dia}T${timeStr}:00-03:00`);
+
+    // Janela de 15 minutos para trás e para frente
+    const timeMin = new Date(eventTime.getTime() - 15 * 60 * 1000).toISOString();
+    const timeMax = new Date(eventTime.getTime() + 15 * 60 * 1000).toISOString();
+
+    const response = await calendar.events.list({
+      calendarId,
+      timeMin,
+      timeMax,
+    });
+
+    const events = response.data.items || [];
+    
+    // Busca implacável: Vasculha o Título E a Descrição do evento
+    const targetEvent = events.find(event => {
+      const title = event.summary || "";
+      const desc = event.description || "";
+      const allText = `${title} ${desc}`; 
+      
+      const textNumbersOnly = allText.replace(/\D/g, ""); // Remove tudo que não for número
+      
+      return textNumbersOnly.includes(cleanInputCpf);
+    });
+
+    if (targetEvent && targetEvent.id) {
+      await calendar.events.delete({
+        calendarId,
+        eventId: targetEvent.id,
+      });
+      console.log(`✅ Evento apagado da agenda do Google com sucesso!`);
+      return { ok: true };
+    }
+
+    // Se não achou por CPF, mas achou UM ÚNICO evento naquele exato horário, apaga ele como segurança
+    if (events.length === 1 && events[0].id) {
+        console.log(`⚠️ CPF não encontrado no texto, mas havia apenas 1 evento no horário. Apagando por segurança.`);
+        await calendar.events.delete({
+            calendarId,
+            eventId: events[0].id,
+        });
+        return { ok: true };
+    }
+
+    console.log("❌ Nenhum evento encontrado para apagar na agenda do Google.");
+    return { ok: false, message: "Evento não encontrado na agenda." };
+    
+  } catch (error) {
+    console.error("🔥 Erro na API do Google Calendar:", error);
     return { ok: false };
   }
 }

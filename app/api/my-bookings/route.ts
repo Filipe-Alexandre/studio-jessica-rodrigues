@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getBookingsByCpf, cancelBooking } from "@/app/lib/google"; 
+import { getBookingsByCpf, cancelBooking, deleteCalendarEvent } from "@/app/lib/google"; 
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -13,10 +13,16 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { rowIndex } = await request.json();
-    const result = await cancelBooking(rowIndex);
+    const { rowIndex, date, time, cpf } = await request.json();
     
+    // 1. Cancela o agendamento na Planilha
+    const result = await cancelBooking(rowIndex);
     if (!result.ok) throw new Error("Erro de comunicação com a planilha");
+    
+    // 2. Remove o evento da Agenda do Google
+    if (date && time && cpf) {
+      await deleteCalendarEvent(date, time, cpf);
+    }
     
     return NextResponse.json({ success: true });
   } catch (error) {

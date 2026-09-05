@@ -34,7 +34,7 @@ const generateICS = (servico: string, dateStr: string, timeStr: string) => {
   try {
     const [dia, mes, ano] = dateStr.split('/');
     const [hora, minuto] = timeStr.split(':');
-    
+
     const startDate = `${ano}${mes}${dia}T${hora}${minuto}00`;
     const endHora = String(Number(hora) + 2).padStart(2, '0');
     const endDate = `${ano}${mes}${dia}T${endHora}${minuto}00`;
@@ -49,12 +49,12 @@ const generateICS = (servico: string, dateStr: string, timeStr: string) => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    
+
     link.setAttribute('download', fileName);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
+
     setTimeout(() => URL.revokeObjectURL(url), 100);
   } catch (error) {
     console.error("Erro ao gerar calendário", error);
@@ -253,11 +253,16 @@ export default function SchedulingForm() {
           await fetch('/api/my-bookings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rowIndex: booking.rowIndex })
+            body: JSON.stringify({
+              rowIndex: booking.rowIndex,
+              date: booking.date,
+              time: booking.time,
+              cpf: meusHorariosCpf
+            })
           });
           await loadAvailability();
           await fetchMyBookings();
-          
+
           const msg = `Olá, gostaria de cancelar meu agendamento de ${booking.servico} no dia ${booking.date} às ${booking.time}.`;
           window.open(`https://wa.me/${STUDIO_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
         } catch (e) {
@@ -284,9 +289,14 @@ export default function SchedulingForm() {
           await fetch('/api/my-bookings', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ rowIndex: booking.rowIndex })
+            body: JSON.stringify({
+              rowIndex: booking.rowIndex,
+              date: booking.date,
+              time: booking.time,
+              cpf: meusHorariosCpf
+            })
           });
-          
+
           setFormData({
             nome: booking.nome,
             telefone: booking.telefone,
@@ -296,7 +306,7 @@ export default function SchedulingForm() {
 
           await loadAvailability();
           await fetchMyBookings();
-          
+
           setStatus({ type: "info", message: "Horário liberado! Escolha a nova data acima e confirme seu reagendamento." });
           window.scrollTo({ top: document.getElementById('agendar')?.offsetTop || 0, behavior: 'smooth' });
         } catch (e) {
@@ -347,7 +357,7 @@ export default function SchedulingForm() {
         throw new Error(result.message || "Erro ao realizar agendamento.");
       }
 
-      await loadAvailability(); 
+      await loadAvailability();
 
       setSelectedSlotId("");
       setAgendamentoConfirmado({ servico: payload.servico, date: payload.date, time: payload.time });
@@ -379,7 +389,7 @@ export default function SchedulingForm() {
       </div>
 
       <div className="scheduling-grid">
-        
+
         {/* COLUNA ESQUERDA (VAGAS) */}
         <div className="left-column-wrapper">
           <div className="available-panel glass-panel">
@@ -387,9 +397,9 @@ export default function SchedulingForm() {
               <h3 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 700, color: 'var(--foreground)', fontFamily: 'var(--font-display)' }}>
                 Horários disponíveis
               </h3>
-              <button 
-                type="button" 
-                onClick={loadAvailability} 
+              <button
+                type="button"
+                onClick={loadAvailability}
                 className="btn-icon-refresh"
                 title="Atualizar horários"
               >
@@ -563,7 +573,7 @@ export default function SchedulingForm() {
           </div>
 
           {hasSearched && myBookings.length === 0 && (
-            <p className="empty-state" style={{textAlign: 'center', marginTop: '8px'}}>Nenhum horário reservado encontrado.</p>
+            <p className="empty-state" style={{ textAlign: 'center', marginTop: '8px' }}>Nenhum horário reservado encontrado.</p>
           )}
 
           {myBookings.length > 0 && (
@@ -631,8 +641,7 @@ export default function SchedulingForm() {
           }}
         >
           <div className={`popup-content white-theme ${status.type}`} style={{ position: 'relative' }}>
-            
-            {/* Adicionada a borda para o status "info" com 5 segundos */}
+
             {((status.type === 'success' && (popupStep === 2 || popupStep === 3)) || status.type === 'info') && (
               <svg
                 key={status.type === 'info' ? 'info' : popupStep}
@@ -668,9 +677,9 @@ export default function SchedulingForm() {
 
             <p>
               {(status.type === 'error' || status.type === 'info') ? status.message :
-               popupStep === 1 ? status.message :
-               popupStep === 2 ? "Tudo certo! Para não esquecer, adicione à sua agenda:" :
-               "Prepare-se para seu momento de cuidado! Veja nossa localização:"}
+                popupStep === 1 ? status.message :
+                  popupStep === 2 ? "Tudo certo! Para não esquecer, adicione à sua agenda:" :
+                    "Prepare-se para seu momento de cuidado! Veja nossa localização:"}
             </p>
 
             {status.type === 'success' && popupStep === 1 && (
