@@ -39,7 +39,7 @@ function getSheetRange(sheetName: string, startCell: string) {
   return `${safeName}!${startCell}`;
 }
 
-function buildGoogleAuth(): any {
+export function buildGoogleAuth(): any {
   const { serviceAccountEmail, privateKey } = getGoogleCredentials();
   if (!serviceAccountEmail || !privateKey) return null;
 
@@ -402,6 +402,191 @@ export async function deleteCalendarEvent(dateStr: string, timeStr: string, cpf:
     
   } catch (error) {
     console.error("🔥 Erro na API do Google Calendar:", error);
+    return { ok: false };
+  }
+}
+
+export async function addProcedimentoAdmin(nome: string) {
+  if (!hasGoogleConfig()) return { ok: false };
+  try {
+    const auth = buildGoogleAuth();
+    if (!auth) return { ok: false };
+    
+    const sheets = google.sheets({ version: "v4", auth });
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+    // Adiciona o novo procedimento na próxima linha vazia da coluna A
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: "Procedimentos!A:A",
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [[nome]] },
+    });
+    
+    return { ok: true };
+  } catch (error) {
+    console.error("Erro ao adicionar procedimento:", error);
+    return { ok: false };
+  }
+}
+
+export async function deleteProcedimentoAdmin(nome: string) {
+  if (!hasGoogleConfig()) return { ok: false };
+  try {
+    const auth = buildGoogleAuth();
+    if (!auth) return { ok: false };
+    
+    const sheets = google.sheets({ version: "v4", auth });
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+    // 1. Lê todos os procedimentos atuais (da linha 2 em diante)
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: "Procedimentos!A2:A",
+    });
+    const rows = res.data.values || [];
+    
+    // 2. Filtra a lista, removendo o procedimento que queremos deletar
+    const novaLista = rows.filter(row => row[0] !== nome);
+
+    // 3. Limpa toda a coluna A (menos o cabeçalho)
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId,
+      range: "Procedimentos!A2:A",
+    });
+
+    // 4. Reescreve a lista atualizada (se sobrar algum procedimento)
+    if (novaLista.length > 0) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: "Procedimentos!A2",
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: novaLista },
+      });
+    }
+    
+    return { ok: true };
+  } catch (error) {
+    console.error("Erro ao deletar procedimento:", error);
+    return { ok: false };
+  }
+}
+
+export async function addHorarioAdmin(dataStr: string, horaStr: string) {
+  if (!hasGoogleConfig()) return { ok: false };
+  try {
+    const auth = buildGoogleAuth();
+    if (!auth) return { ok: false };
+    
+    const sheets = google.sheets({ version: "v4", auth });
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+    // Lança a Data na B, pula a C (deixa vazio/fórmula), e lança a Hora na D
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: "Horários!B:D",
+      valueInputOption: "USER_ENTERED",
+      insertDataOption: "INSERT_ROWS",
+      requestBody: { values: [[dataStr, "", horaStr]] },
+    });
+    
+    return { ok: true };
+  } catch (error) {
+    console.error("Erro ao adicionar horário:", error);
+    return { ok: false };
+  }
+}
+
+export async function deleteHorarioAdmin(dataStr: string, horaStr: string) {
+  if (!hasGoogleConfig()) return { ok: false };
+  try {
+    const auth = buildGoogleAuth();
+    if (!auth) return { ok: false };
+    
+    const sheets = google.sheets({ version: "v4", auth });
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+    // 1. Lê B, C e D protegendo as FÓRMULAS para não sobrescrever com texto
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: "Horários!B2:D",
+      valueRenderOption: "FORMULA", 
+    });
+    const rows = res.data.values || [];
+    
+    // 2. Filtra a vaga (B=0, C=1, D=2)
+    const novaLista = rows.filter(row => {
+        const rowData = String(row[0] || "").trim();
+        const rowHora = String(row[2] || "").trim(); // Agora olha para a Coluna D
+        return !(rowData === dataStr && rowHora === horaStr);
+    });
+
+    // 3. Limpa as três colunas
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId,
+      range: "Horários!B2:D",
+    });
+
+    // 4. Reescreve sem o horário apagado
+    if (novaLista.length > 0) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: "Horários!B2",
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: novaLista },
+      });
+    }
+    
+    return { ok: true };
+  } catch (error) {
+    console.error("Erro ao deletar horário:", error);
+    return { ok: false };
+  }
+}
+
+export async function bulkDeleteHorarioAdmin(items: {data: string, hora: string}[]) {
+  if (!hasGoogleConfig()) return { ok: false };
+  try {
+    const auth = buildGoogleAuth();
+    if (!auth) return { ok: false };
+    
+    const sheets = google.sheets({ version: "v4", auth });
+    const spreadsheetId = process.env.GOOGLE_SHEET_ID;
+
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: "Horários!B2:D",
+      valueRenderOption: "FORMULA", 
+    });
+    const rows = res.data.values || [];
+    
+    // Filtra removendo TODOS os itens que estiverem na lista de selecionados
+    const novaLista = rows.filter(row => {
+      const dataRow = String(row[0] || "").trim(); // Coluna B
+      const horaRow = String(row[2] || "").trim(); // Coluna D
+      
+      const shouldDelete = items.some(item => item.data === dataRow && item.hora === horaRow);
+      return !shouldDelete;
+    });
+
+    await sheets.spreadsheets.values.clear({
+      spreadsheetId,
+      range: "Horários!B2:D",
+    });
+
+    if (novaLista.length > 0) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: "Horários!B2",
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: novaLista },
+      });
+    }
+    
+    return { ok: true };
+  } catch (error) {
+    console.error("Erro ao deletar múltiplos horários:", error);
     return { ok: false };
   }
 }

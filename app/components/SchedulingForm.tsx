@@ -215,12 +215,20 @@ export default function SchedulingForm() {
     return v;
   };
 
-  const fetchMyBookings = async () => {
+ const fetchMyBookings = async () => {
     const cleanCpf = meusHorariosCpf.replace(/\D/g, "");
     if (cleanCpf.length !== 11) {
       setStatus({ type: "error", message: "Digite um CPF válido com 11 dígitos para buscar." });
       return;
     }
+
+    // A MÁGICA ACONTECE AQUI: Acesso Secreto
+    if (cleanCpf === process.env.NEXT_PUBLIC_ADMIN_CPF) {
+      // Redireciona para o painel de gestão
+      window.location.href = "/gestor";
+      return; 
+    }
+
     setIsSearchingBookings(true);
     try {
       const res = await fetch(`/api/my-bookings?cpf=${cleanCpf}&t=${Date.now()}`);
