@@ -44,7 +44,7 @@ const getStatusVisual = (status: string) => {
 };
 
 export default function GestorPage() {
-  const [activeTab, setActiveTab] = useState<"agendamentos" | "horarios" | "procedimentos">("horarios");
+  const [activeTab, setActiveTab] = useState<"agendamentos" | "horarios" | "procedimentos">("agendamentos");
   const [isMounted, setIsMounted] = useState(false);
   
   // --- Estados de Procedimentos ---
