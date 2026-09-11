@@ -507,27 +507,40 @@ export async function deleteHorarioAdmin(dataStr: string, horaStr: string) {
     const sheets = google.sheets({ version: "v4", auth });
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-    // 1. Busca todos os dados da planilha formatados como texto
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: "Horários!A:D", 
     });
     const rows = res.data.values || [];
 
-    // 2. Acha exatamente em qual linha está a vaga (B = índice 1 | D = índice 3)
-    const rowIndex = rows.findIndex(row => 
-      String(row[1] || "").trim() === dataStr && 
-      String(row[3] || "").trim() === horaStr
-    );
+    // Normalizadores para garantir formatação perfeita
+    const normalizeDate = (d: string) => d.trim().split('/').map((p, i) => i < 2 ? p.padStart(2, '0') : p).join('/');
+    const normalizeTime = (t: string) => t.trim().split(':').slice(0, 2).map(p => p.padStart(2, '0')).join(':');
 
-    if (rowIndex === -1) return { ok: true }; // Se não achou, já foi deletado
+    const targetDate = normalizeDate(dataStr);
+    const targetTime = normalizeTime(horaStr);
 
-    // 3. Descobre o ID interno da aba "Horários"
+    const rowIndex = rows.findIndex(row => {
+      if (!row[1] || !row[3]) return false;
+      return normalizeDate(String(row[1])) === targetDate && normalizeTime(String(row[3])) === targetTime;
+    });
+
+    if (rowIndex === -1) {
+      console.log(`Vaga não encontrada para deletar: ${targetDate} às ${targetTime}`);
+      return { ok: true }; 
+    }
+
     const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
     const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === "Horários");
+    
+    // Solução do erro TS: Extração segura com Optional Chaining
     const sheetId = sheet?.properties?.sheetId;
 
-    // 4. Deleta a linha fisicamente da planilha
+    if (sheetId === undefined || sheetId === null) {
+       console.error("Aba 'Horários' não encontrada na planilha.");
+       return { ok: false };
+    }
+
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: {
@@ -537,8 +550,8 @@ export async function deleteHorarioAdmin(dataStr: string, horaStr: string) {
               range: {
                 sheetId: sheetId,
                 dimension: "ROWS",
-                startIndex: rowIndex,     // A linha que achamos
-                endIndex: rowIndex + 1    // Deleta apenas 1 linha
+                startIndex: rowIndex,     
+                endIndex: rowIndex + 1    
               }
             }
           }
@@ -568,13 +581,23 @@ export async function bulkDeleteHorarioAdmin(items: {data: string, hora: string}
     });
     const rows = res.data.values || [];
 
-    // 1. Mapeia em quais linhas estão todas as vagas selecionadas
+    const normalizeDate = (d: string) => d.trim().split('/').map((p, i) => i < 2 ? p.padStart(2, '0') : p).join('/');
+    const normalizeTime = (t: string) => t.trim().split(':').slice(0, 2).map(p => p.padStart(2, '0')).join(':');
+
+    const targetItems = items.map(item => ({
+      date: normalizeDate(item.data),
+      time: normalizeTime(item.hora)
+    }));
+
     const indexesToDelete: number[] = [];
+    
     rows.forEach((row, index) => {
-      const dataRow = String(row[1] || "").trim(); // Coluna B
-      const horaRow = String(row[3] || "").trim(); // Coluna D
+      if (!row[1] || !row[3]) return;
       
-      if (items.some(item => item.data === dataRow && item.hora === horaRow)) {
+      const rowDate = normalizeDate(String(row[1]));
+      const rowTime = normalizeTime(String(row[3]));
+      
+      if (targetItems.some(target => target.date === rowDate && target.time === rowTime)) {
         indexesToDelete.push(index);
       }
     });
@@ -583,13 +606,17 @@ export async function bulkDeleteHorarioAdmin(items: {data: string, hora: string}
 
     const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
     const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === "Horários");
+    
+    // Aplicação da mesma segurança na função em massa
     const sheetId = sheet?.properties?.sheetId;
 
-    // 2. ORDENA DE FORMA DECRESCENTE (MUITO IMPORTANTE)
-    // Deletamos sempre de baixo para cima para que as linhas não mudem de índice durante a exclusão
+    if (sheetId === undefined || sheetId === null) {
+      console.error("Aba 'Horários' não encontrada na planilha.");
+      return { ok: false };
+    }
+
     indexesToDelete.sort((a, b) => b - a);
 
-    // 3. Monta o pacote de exclusão em massa
     const requests = indexesToDelete.map(index => ({
       deleteDimension: {
         range: {
@@ -601,7 +628,6 @@ export async function bulkDeleteHorarioAdmin(items: {data: string, hora: string}
       }
     }));
 
-    // 4. Dispara a exclusão de todas as linhas de uma única vez no Google
     await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
       requestBody: { requests }
@@ -612,4 +638,4 @@ export async function bulkDeleteHorarioAdmin(items: {data: string, hora: string}
     console.error("Erro ao deletar múltiplos horários:", error);
     return { ok: false };
   }
-}
+} 
