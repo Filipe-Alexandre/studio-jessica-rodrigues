@@ -62,7 +62,19 @@ const generateICS = (servico: string, dateStr: string, timeStr: string) => {
 };
 
 const getMonthName = (dateStr: string) => {
-  const [dia, mes, ano] = dateStr.split('/');
+  // 1. Proteção: se a data não existir ou não tiver barras, ignora a quebra
+  if (!dateStr || typeof dateStr !== 'string' || !dateStr.includes('/')) {
+    return 'Data Inválida';
+  }
+
+  const partes = dateStr.split('/');
+  
+  // 2. Proteção: garante que temos dia, mês e ano antes de continuar
+  if (partes.length < 3) {
+    return 'Data Inválida';
+  }
+
+  const [dia, mes, ano] = partes;
   const date = new Date(Number(ano), Number(mes) - 1, 1);
   const currentYear = new Date().getFullYear();
   const monthStr = date.toLocaleDateString('pt-BR', { month: 'long' });
@@ -70,6 +82,7 @@ const getMonthName = (dateStr: string) => {
   if (Number(ano) === currentYear) {
     return monthStr;
   } else {
+    // Agora é 100% seguro usar o slice, pois o ano com certeza existe
     return `${monthStr}/${ano.slice(-2)}`;
   }
 };
