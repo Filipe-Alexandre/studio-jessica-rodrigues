@@ -68,7 +68,7 @@ const getMonthName = (dateStr: string) => {
   }
 
   const partes = dateStr.split('/');
-  
+
   // 2. Proteção: garante que temos dia, mês e ano antes de continuar
   if (partes.length < 3) {
     return 'Data Inválida';
@@ -228,33 +228,36 @@ export default function SchedulingForm() {
     return v;
   };
 
- const fetchMyBookings = async () => {
+  const fetchMyBookings = async () => {
     const cleanCpf = meusHorariosCpf.replace(/\D/g, "");
     if (cleanCpf.length !== 11) {
       setStatus({ type: "error", message: "Digite um CPF válido com 11 dígitos para buscar." });
       return;
     }
 
-    // A MÁGICA ACONTECE AQUI: Acesso Secreto
-    if (cleanCpf === process.env.NEXT_PUBLIC_ADMIN_CPF) {
-      // Redireciona para o painel de gestão
-      window.location.href = "/gestor";
-      return; 
-    }
-
     setIsSearchingBookings(true);
+
     try {
+      // 1. Verifica se o CPF digitado é o do Administrador (Opção 1)
+      if (cleanCpf === process.env.NEXT_PUBLIC_ADMIN_CPF) {
+        window.location.href = "/gestor";
+        return;
+      }
+
+      // 2. Se NÃO for o admin, continua a busca normal de agendamentos da cliente
       const res = await fetch(`/api/my-bookings?cpf=${cleanCpf}&t=${Date.now()}`);
       if (!res.ok) {
         setStatus({ type: "error", message: "Erro ao buscar no servidor. Tente novamente." });
         return;
       }
+
       const data = await res.json();
       setMyBookings(data.bookings || []);
       setHasSearched(true);
+
     } catch (error) {
       console.error(error);
-      setStatus({ type: "error", message: "Falha ao buscar agendamentos." });
+      setStatus({ type: "error", message: "Falha ao processar a requisição." });
     } finally {
       setIsSearchingBookings(false);
     }

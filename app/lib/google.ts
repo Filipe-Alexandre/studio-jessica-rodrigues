@@ -482,13 +482,13 @@ export async function addHorarioAdmin(dataStr: string, horaStr: string) {
     const sheets = google.sheets({ version: "v4", auth });
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-    // Lança a Data na B, pula a C (deixa vazio/fórmula), e lança a Hora na D
+    // Lança a Data na B, pula a C (null protege a fórmula) e lança a Hora na D
     await sheets.spreadsheets.values.append({
       spreadsheetId,
       range: "Horários!B:D",
       valueInputOption: "USER_ENTERED",
       insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [[dataStr, "", horaStr]] },
+      requestBody: { values: [[dataStr, null, horaStr]] },
     });
     
     return { ok: true };
@@ -507,37 +507,45 @@ export async function deleteHorarioAdmin(dataStr: string, horaStr: string) {
     const sheets = google.sheets({ version: "v4", auth });
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-    // 1. Lê B, C e D protegendo as FÓRMULAS para não sobrescrever com texto
+    // 1. Busca todos os dados da planilha formatados como texto
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "Horários!B2:D",
-      valueRenderOption: "FORMULA", 
+      range: "Horários!A:D", 
     });
     const rows = res.data.values || [];
-    
-    // 2. Filtra a vaga (B=0, C=1, D=2)
-    const novaLista = rows.filter(row => {
-        const rowData = String(row[0] || "").trim();
-        const rowHora = String(row[2] || "").trim(); // Agora olha para a Coluna D
-        return !(rowData === dataStr && rowHora === horaStr);
-    });
 
-    // 3. Limpa as três colunas
-    await sheets.spreadsheets.values.clear({
+    // 2. Acha exatamente em qual linha está a vaga (B = índice 1 | D = índice 3)
+    const rowIndex = rows.findIndex(row => 
+      String(row[1] || "").trim() === dataStr && 
+      String(row[3] || "").trim() === horaStr
+    );
+
+    if (rowIndex === -1) return { ok: true }; // Se não achou, já foi deletado
+
+    // 3. Descobre o ID interno da aba "Horários"
+    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+    const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === "Horários");
+    const sheetId = sheet?.properties?.sheetId;
+
+    // 4. Deleta a linha fisicamente da planilha
+    await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
-      range: "Horários!B2:D",
+      requestBody: {
+        requests: [
+          {
+            deleteDimension: {
+              range: {
+                sheetId: sheetId,
+                dimension: "ROWS",
+                startIndex: rowIndex,     // A linha que achamos
+                endIndex: rowIndex + 1    // Deleta apenas 1 linha
+              }
+            }
+          }
+        ]
+      }
     });
 
-    // 4. Reescreve sem o horário apagado
-    if (novaLista.length > 0) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: "Horários!B2",
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values: novaLista },
-      });
-    }
-    
     return { ok: true };
   } catch (error) {
     console.error("Erro ao deletar horário:", error);
@@ -556,34 +564,49 @@ export async function bulkDeleteHorarioAdmin(items: {data: string, hora: string}
 
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "Horários!B2:D",
-      valueRenderOption: "FORMULA", 
+      range: "Horários!A:D", 
     });
     const rows = res.data.values || [];
-    
-    // Filtra removendo TODOS os itens que estiverem na lista de selecionados
-    const novaLista = rows.filter(row => {
-      const dataRow = String(row[0] || "").trim(); // Coluna B
-      const horaRow = String(row[2] || "").trim(); // Coluna D
+
+    // 1. Mapeia em quais linhas estão todas as vagas selecionadas
+    const indexesToDelete: number[] = [];
+    rows.forEach((row, index) => {
+      const dataRow = String(row[1] || "").trim(); // Coluna B
+      const horaRow = String(row[3] || "").trim(); // Coluna D
       
-      const shouldDelete = items.some(item => item.data === dataRow && item.hora === horaRow);
-      return !shouldDelete;
+      if (items.some(item => item.data === dataRow && item.hora === horaRow)) {
+        indexesToDelete.push(index);
+      }
     });
 
-    await sheets.spreadsheets.values.clear({
+    if (indexesToDelete.length === 0) return { ok: true };
+
+    const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId });
+    const sheet = spreadsheet.data.sheets?.find(s => s.properties?.title === "Horários");
+    const sheetId = sheet?.properties?.sheetId;
+
+    // 2. ORDENA DE FORMA DECRESCENTE (MUITO IMPORTANTE)
+    // Deletamos sempre de baixo para cima para que as linhas não mudem de índice durante a exclusão
+    indexesToDelete.sort((a, b) => b - a);
+
+    // 3. Monta o pacote de exclusão em massa
+    const requests = indexesToDelete.map(index => ({
+      deleteDimension: {
+        range: {
+          sheetId: sheetId,
+          dimension: "ROWS",
+          startIndex: index,
+          endIndex: index + 1
+        }
+      }
+    }));
+
+    // 4. Dispara a exclusão de todas as linhas de uma única vez no Google
+    await sheets.spreadsheets.batchUpdate({
       spreadsheetId,
-      range: "Horários!B2:D",
+      requestBody: { requests }
     });
 
-    if (novaLista.length > 0) {
-      await sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: "Horários!B2",
-        valueInputOption: "USER_ENTERED",
-        requestBody: { values: novaLista },
-      });
-    }
-    
     return { ok: true };
   } catch (error) {
     console.error("Erro ao deletar múltiplos horários:", error);
