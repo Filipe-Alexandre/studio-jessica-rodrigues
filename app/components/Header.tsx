@@ -14,10 +14,15 @@ export default function Header() {
     <header className="topbar glass-panel">
       <div className="brand-block">
         {/* Novo logotipo em formato de texto */}
-        <div className="brand-logo-text">
+        <Link
+          href="/"
+          className="brand-logo-text"
+          style={{ textDecoration: "none" }}
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        >
           <span className="logo-studio">STUDIO</span>
           <span className="logo-name">JESSICA RODRIGUES</span>
-        </div>
+        </Link>
       </div>
 
       <nav className="main-nav" aria-label="Navegação principal">
@@ -29,9 +34,9 @@ export default function Header() {
       </nav>
 
       {/* Botão corrigido sem a tag span e focado inteiramente no cálculo de eixo Y */}
-      <button 
-        className="btn btn-primary" 
-        style={{ cursor: 'pointer' }} 
+      <button
+        className="btn btn-primary"
+        style={{ cursor: 'pointer' }}
         onClick={() => {
           if (window.location.pathname === '/') {
             const secao = document.getElementById('agendar');

@@ -1,0 +1,73 @@
+/* gestor-query.scss */
+
+@media (max-width: 768px) {
+  .gestor-page-wrapper {
+    padding: 80px 10px 20px;
+  }
+  
+/* 1. Criamos a animação infinita de rolagem */
+  @keyframes marquee-scroll {
+    0% { transform: translateX(100vw); } /* Começa fora da tela pela direita */
+    100% { transform: translateX(-100%); } /* Termina fora da tela pela esquerda */
+  }
+
+  /* 2. Aplicamos o efeito no header */
+  .easter-egg-header {
+    margin-bottom: 16px;
+    overflow: hidden; /* Corta o texto para não gerar barra de rolagem na página inteira */
+    position: relative;
+    height: 30px; /* Fixa a altura para os elementos não pularem */
+    display: flex;
+    align-items: center;
+    
+    .easter-egg-text {
+      font-size: 0.9rem;
+      white-space: nowrap; /* Obriga o texto a ficar em uma linha só */
+      display: inline-block;
+      animation: marquee-scroll 20s linear infinite; /* 14 segundos é um tempo de leitura agradável */
+      
+      /* Reset para anular a quebra de linha de antes */
+      -webkit-line-clamp: unset;
+      line-clamp: unset;
+      -webkit-box-orient: unset;
+    }
+    
+    .easter-egg-secret {
+      font-size: 1.2rem;
+    }
+  }
+
+  /* Reforço de segurança para a rolagem das abas não ficar colada */
+  .gestor-tabs {
+    padding-bottom: 12px;
+    height: 120px; /* Garante que a altura mínima dos botões seja respeitada */
+  }
+  
+  .gestor-nav {
+    padding: 16px 20px;
+    justify-content: center;
+  }
+
+  .gestor-container {
+    padding: 20px;
+    max-height: 88vh;
+    border-radius: 20px;
+  }
+
+  .gestor-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 10px;
+    &::-webkit-scrollbar { height: 4px; }
+  }
+
+  .agendamento-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .horarios-grid {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+}

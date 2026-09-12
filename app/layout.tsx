@@ -9,6 +9,8 @@ import { config } from "@fortawesome/fontawesome-svg-core";
 
 import "./styles/globals.scss";
 import "./styles/queries.scss";
+import "./styles/gestor.scss";
+import "./styles/gestor-query.scss";
 
 config.autoAddCss = false;
 

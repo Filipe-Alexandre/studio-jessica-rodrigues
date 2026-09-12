@@ -482,15 +482,28 @@ export async function addHorarioAdmin(dataStr: string, horaStr: string) {
     const sheets = google.sheets({ version: "v4", auth });
     const spreadsheetId = process.env.GOOGLE_SHEET_ID;
 
-    // Lança a Data na B, pula a C (null protege a fórmula) e lança a Hora na D
+    // 1. Calcula automaticamente o dia da semana (Coluna C)
+    const [dia, mes, ano] = dataStr.split('/');
+    const dataObj = new Date(Number(ano), Number(mes) - 1, Number(dia));
+    const diasSemana = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+    const diaSemana = diasSemana[dataObj.getDay()];
+
+    // 2. Gera um ID aleatório simples de 4 dígitos para a Vaga (Coluna A)
+    const idVaga = `#${Math.floor(1000 + Math.random() * 9000)}`;
+    
+    // 3. Define o status inicial padrão (Coluna E)
+    const statusVaga = "livre";
+
+    // 4. Monta a linha EXATAMENTE na ordem da sua planilha: [ID, DATA, DIA, HORARIO, STATUS]
+    const values = [[idVaga, dataStr, diaSemana, horaStr, statusVaga]];
+
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: "Horários!B:D",
+      range: "Horários!A:E",
       valueInputOption: "USER_ENTERED",
-      insertDataOption: "INSERT_ROWS",
-      requestBody: { values: [[dataStr, null, horaStr]] },
+      requestBody: { values },
     });
-    
+
     return { ok: true };
   } catch (error) {
     console.error("Erro ao adicionar horário:", error);
