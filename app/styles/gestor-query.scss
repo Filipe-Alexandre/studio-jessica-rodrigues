@@ -16,12 +16,13 @@
     margin-bottom: 16px;
     overflow: hidden; /* Corta o texto para não gerar barra de rolagem na página inteira */
     position: relative;
-    height: 30px; /* Fixa a altura para os elementos não pularem */
+    height: 100px; /* Fixa a altura para os elementos não pularem */
     display: flex;
     align-items: center;
+
     
     .easter-egg-text {
-      font-size: 0.9rem;
+      font-size: 1.4rem!important;
       white-space: nowrap; /* Obriga o texto a ficar em uma linha só */
       display: inline-block;
       animation: marquee-scroll 20s linear infinite; /* 14 segundos é um tempo de leitura agradável */
@@ -33,15 +34,11 @@
     }
     
     .easter-egg-secret {
-      font-size: 1.2rem;
+      font-size: 1.4rem;
     }
   }
 
   /* Reforço de segurança para a rolagem das abas não ficar colada */
-  .gestor-tabs {
-    padding-bottom: 12px;
-    height: 120px; /* Garante que a altura mínima dos botões seja respeitada */
-  }
   
   .gestor-nav {
     padding: 16px 20px;
@@ -57,7 +54,7 @@
   .gestor-tabs {
     overflow-x: auto;
     white-space: nowrap;
-    padding-bottom: 10px;
+    padding-bottom: 40px;
     &::-webkit-scrollbar { height: 4px; }
   }
 
