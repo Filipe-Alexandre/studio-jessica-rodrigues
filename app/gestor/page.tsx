@@ -156,7 +156,7 @@ export default function GestorPage() {
       <Header />
 
       <div className="gestor-container">
-<aside
+        <aside
           className={`easter-egg-header ${isEasterEggHovered ? 'hovered' : ''}`}
           onMouseEnter={() => setIsEasterEggHovered(true)}
           onMouseLeave={() => setIsEasterEggHovered(false)}
@@ -181,7 +181,16 @@ export default function GestorPage() {
           )}
 
           {activeTab === "horarios" && (
-            <HorariosTab horarios={horarios} agendamentos={agendamentos} isLoading={isLoadingHorarios} onAdd={handleAddHorario} onDelete={handleDeleteHorario} onBulkDelete={handleBulkDelete} onRefresh={fetchHorarios} />
+            <HorariosTab
+              horarios={horarios}
+              agendamentos={agendamentos}
+              procedimentosRaw={procedimentosRaw}
+              isLoading={isLoadingHorarios}
+              onAdd={handleAddHorario}
+              onDelete={handleDeleteHorario}
+              onBulkDelete={handleBulkDelete}
+              onRefresh={fetchHorarios}
+            />
           )}
 
           {activeTab === "procedimentos" && (

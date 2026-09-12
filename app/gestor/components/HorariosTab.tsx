@@ -1,11 +1,12 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { HorarioSlot, Agendamento, parseProcedimento, getStatusVisual } from "./utils";
+import { HorarioSlot, Agendamento, parseProcedimento, getStatusVisual, getProcedimentoAtualizado } from "./utils";
 
 type Props = {
   horarios: HorarioSlot[];
   agendamentos: Agendamento[];
+  procedimentosRaw: string[]; // <-- Adicionado para puxar a cor atualizada
   isLoading: boolean;
   onAdd: (data: string, hora: string, onSuccess: () => void) => void;
   onDelete: (data: string, hora: string) => void;
@@ -13,7 +14,7 @@ type Props = {
   onRefresh: () => void;
 };
 
-export default function HorariosTab({ horarios, agendamentos, isLoading, onAdd, onDelete, onBulkDelete, onRefresh }: Props) {
+export default function HorariosTab({ horarios, agendamentos, procedimentosRaw, isLoading, onAdd, onDelete, onBulkDelete, onRefresh }: Props) {
   const [isMounted, setIsMounted] = useState(false);
   const [novaDataInput, setNovaDataInput] = useState("");
   const [novaHoraInput, setNovaHoraInput] = useState("");
@@ -86,7 +87,9 @@ export default function HorariosTab({ horarios, agendamentos, isLoading, onAdd, 
             const isSelected = selectedSlots.some(s => s.data === slot.data && s.hora === slot.hora);
             
             const agVinculado = agendamentos.find(a => a.data === slot.data && a.hora === slot.hora && a.status.toLowerCase() !== 'cancelado');
-            const procObj = agVinculado ? parseProcedimento(agVinculado.procedimento) : null;
+            
+            // CORREÇÃO: Puxando a cor dinamicamente da lista de procedimentosRaw
+            const procObj = agVinculado ? getProcedimentoAtualizado(agVinculado.procedimento, procedimentosRaw) : null;
             const destaqueColor = procObj ? procObj.cor : 'var(--primary)';
             const bgCard = slot.ocupado ? `${destaqueColor}1A` : 'transparent';
             const borderCard = isSelected ? "2px solid #ff4d4f" : (slot.ocupado ? `2px solid ${destaqueColor}` : "1px solid var(--glass-border)");
@@ -106,7 +109,9 @@ export default function HorariosTab({ horarios, agendamentos, isLoading, onAdd, 
 
       {isMounted && selectedHorario && !isSelectionMode && (() => {
         const agVinculado = agendamentos.find(a => a.data === selectedHorario.data && a.hora === selectedHorario.hora);
-        const procInfo = agVinculado ? parseProcedimento(agVinculado.procedimento) : null;
+        
+        // CORREÇÃO: Puxando a cor dinamicamente da lista de procedimentosRaw para o pop-up
+        const procInfo = agVinculado ? getProcedimentoAtualizado(agVinculado.procedimento, procedimentosRaw) : null;
         const statusInfo = agVinculado ? getStatusVisual(agVinculado.status) : null;
 
         return createPortal(

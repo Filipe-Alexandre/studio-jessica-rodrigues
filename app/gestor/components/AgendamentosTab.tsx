@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Agendamento, parseProcedimento, getStatusVisual } from "./utils";
+import { Agendamento, parseProcedimento, getStatusVisual, getProcedimentoAtualizado } from "./utils";
 
 type Props = {
   agendamentos: Agendamento[];
@@ -64,7 +64,8 @@ export default function AgendamentosTab({ agendamentos, procedimentosRaw, isLoad
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {agendamentosFiltrados.map((ag, i) => {
-            const procObj = parseProcedimento(ag.procedimento);
+            // CORREÇÃO: Utilizando getProcedimentoAtualizado em vez de parseProcedimento
+            const procObj = getProcedimentoAtualizado(ag.procedimento, procedimentosRaw);
             const visStatus = getStatusVisual(ag.status);
             const isAtivo = ag.status.toLowerCase() !== 'concluído' && ag.status.toLowerCase() !== 'cancelado';
             
@@ -98,7 +99,8 @@ export default function AgendamentosTab({ agendamentos, procedimentosRaw, isLoad
 
       {isMounted && selectedAgendamento && createPortal(
         <div className="popup-overlay" onClick={() => {setSelectedAgendamento(null); setIsProcDropdownOpen(false);}} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0, 0, 0, 0.7)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
-          <div className="popup-content white-theme" onClick={e => e.stopPropagation()} style={{ background: 'var(--background)', border: `1px solid ${parseProcedimento(selectedAgendamento.procedimento).cor}`, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
+          {/* CORREÇÃO: Utilizando getProcedimentoAtualizado para a borda do Pop-up */}
+          <div className="popup-content white-theme" onClick={e => e.stopPropagation()} style={{ background: 'var(--background)', border: `1px solid ${getProcedimentoAtualizado(selectedAgendamento.procedimento, procedimentosRaw).cor}`, borderRadius: '24px', padding: '32px', width: '100%', maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '20px', position: 'relative' }}>
             <button className="popup-close-btn" onClick={() => {setSelectedAgendamento(null); setIsProcDropdownOpen(false);}}><i className="fa-solid fa-xmark"></i></button>
             <h3 style={{ margin: 0, color: 'var(--foreground)' }}>Detalhes do Agendamento</h3>
             
