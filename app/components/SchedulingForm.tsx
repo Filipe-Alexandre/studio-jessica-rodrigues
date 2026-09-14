@@ -545,18 +545,22 @@ export default function SchedulingForm() {
 
               {isDropdownOpen && (
                 <div className="custom-dropdown-list">
-                  {procedimentos.map((proc) => (
-                    <div
-                      key={proc}
-                      className={`custom-dropdown-item ${formData.servico === proc ? 'selected-item' : ''}`}
-                      onClick={() => {
-                        setFormData({ ...formData, servico: proc });
-                        setIsDropdownOpen(false);
-                      }}
-                    >
-                      {proc}
-                    </div>
-                  ))}
+                  {procedimentos.map((proc) => {
+                    const nomeLimpo = proc.split(";;")[0];
+
+                    return (
+                      <div
+                        key={proc}
+                        className={`custom-dropdown-item ${formData.servico === proc ? 'selected-item' : ''}`}
+                        onClick={() => {
+                          setFormData({ ...formData, servico: proc });
+                          setIsDropdownOpen(false);
+                        }}
+                      >
+                        {nomeLimpo}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
