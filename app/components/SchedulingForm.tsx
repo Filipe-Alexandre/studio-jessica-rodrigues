@@ -39,7 +39,7 @@ const generateICS = (servico: string, dateStr: string, timeStr: string) => {
     const endHora = String(Number(hora) + 2).padStart(2, '0');
     const endDate = `${ano}${mes}${dia}T${endHora}${minuto}00`;
 
-    const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//${STUDIO_NAME}//Agendamento//PT\nBEGIN:VEVENT\nSUMMARY:Agendamento: ${servico}\nDTSTART;TZID=America/Sao_Paulo:${startDate}\nDTEND;TZID=America/Sao_Paulo:${endDate}\nLOCATION:${STUDIO_LOCATION}\nDESCRIPTION:Seu momento de cuidado e bem-estar no ${STUDIO_NAME}.\nEND:VEVENT\nEND:VCALENDAR`;
+    const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//${STUDIO_NAME}//Agendamento//PT\nBEGIN:VEVENT\nSUMMARY:Agendamento: ${servico.split(";;")[0]}\nDTSTART;TZID=America/Sao_Paulo:${startDate}\nDTEND;TZID=America/Sao_Paulo:${endDate}\nLOCATION:${STUDIO_LOCATION}\nDESCRIPTION:Seu momento de cuidado e bem-estar no ${STUDIO_NAME}.\nEND:VEVENT\nEND:VCALENDAR`;
 
     const safeDate = dateStr.replace(/\//g, "-");
     const safeTime = timeStr.replace(":", "h");
@@ -62,14 +62,12 @@ const generateICS = (servico: string, dateStr: string, timeStr: string) => {
 };
 
 const getMonthName = (dateStr: string) => {
-  // 1. Proteção: se a data não existir ou não tiver barras, ignora a quebra
   if (!dateStr || typeof dateStr !== 'string' || !dateStr.includes('/')) {
     return 'Data Inválida';
   }
 
   const partes = dateStr.split('/');
 
-  // 2. Proteção: garante que temos dia, mês e ano antes de continuar
   if (partes.length < 3) {
     return 'Data Inválida';
   }
@@ -82,7 +80,6 @@ const getMonthName = (dateStr: string) => {
   if (Number(ano) === currentYear) {
     return monthStr;
   } else {
-    // Agora é 100% seguro usar o slice, pois o ano com certeza existe
     return `${monthStr}/${ano.slice(-2)}`;
   }
 };
@@ -136,7 +133,6 @@ export default function SchedulingForm() {
     setIsMounted(true);
   }, []);
 
-  // Timer: Fecha popup de erro ou informação nativa (5 segundos)
   useEffect(() => {
     if (status.message && (status.type === 'error' || status.type === 'info')) {
       const timer = setTimeout(() => {
@@ -146,7 +142,6 @@ export default function SchedulingForm() {
     }
   }, [status.message, status.type]);
 
-  // Timer: Passo 2 (Agenda) -> Passo 3 (Mapa) - 10 SEGUNDOS
   useEffect(() => {
     if (status.type === 'success' && popupStep === 2) {
       const timer = setTimeout(() => {
@@ -156,7 +151,6 @@ export default function SchedulingForm() {
     }
   }, [status.type, popupStep]);
 
-  // Timer: Passo 3 (Mapa) -> Fecha o Popup - 10 SEGUNDOS
   useEffect(() => {
     if (status.type === 'success' && popupStep === 3) {
       const timer = setTimeout(() => {
@@ -176,9 +170,12 @@ export default function SchedulingForm() {
       setSlots(fetchedSlots);
       setProcedimentos(data.procedimentos ?? []);
 
+      // CORREÇÃO: Força a Limpeza de Pele a ser o item pré-selecionado!
       if (data.procedimentos?.length > 0 && !formData.servico) {
-        setFormData(current => ({ ...current, servico: data.procedimentos[0] }));
+        const limpezaDePele = data.procedimentos.find((p: string) => p.toLowerCase().includes("limpeza de pele"));
+        setFormData(current => ({ ...current, servico: limpezaDePele || data.procedimentos[0] }));
       }
+
       if (fetchedSlots.length > 0 && !selectedMonth) {
         setSelectedMonth(getMonthName(fetchedSlots[0].date));
       }
@@ -238,13 +235,11 @@ export default function SchedulingForm() {
     setIsSearchingBookings(true);
 
     try {
-      // 1. Verifica se o CPF digitado é o do Administrador (Opção 1)
       if (cleanCpf === process.env.NEXT_PUBLIC_ADMIN_CPF) {
         window.location.href = "/gestor";
         return;
       }
 
-      // 2. Se NÃO for o admin, continua a busca normal de agendamentos da cliente
       const res = await fetch(`/api/my-bookings?cpf=${cleanCpf}&t=${Date.now()}`);
       if (!res.ok) {
         setStatus({ type: "error", message: "Erro ao buscar no servidor. Tente novamente." });
@@ -267,7 +262,7 @@ export default function SchedulingForm() {
     setConfirmModal({
       isOpen: true,
       title: "Cancelar Horário",
-      text: `Deseja realmente cancelar o seu agendamento de ${booking.servico}?`,
+      text: `Deseja realmente cancelar o seu agendamento de ${booking.servico.split(";;")[0]}?`,
       confirmText: "Sim, Cancelar",
       confirmColor: "#DC3545",
       onConfirm: async () => {
@@ -287,7 +282,7 @@ export default function SchedulingForm() {
           await loadAvailability();
           await fetchMyBookings();
 
-          const msg = `Olá, gostaria de cancelar meu agendamento de ${booking.servico} no dia ${booking.date} às ${booking.time}.`;
+          const msg = `Olá, gostaria de cancelar meu agendamento de ${booking.servico.split(";;")[0]} no dia ${booking.date} às ${booking.time}.`;
           window.open(`https://wa.me/${STUDIO_PHONE}?text=${encodeURIComponent(msg)}`, '_blank');
         } catch (e) {
           console.error(e);
@@ -404,6 +399,17 @@ export default function SchedulingForm() {
 
   const availableMonths = Array.from(new Set(slots.map((slot) => getMonthName(slot.date))));
   const filteredSlots = slots.filter((slot) => getMonthName(slot.date) === selectedMonth);
+
+  // A ordenação já estava aqui, perfeita!
+  const procedimentosOrdenados = [...procedimentos].sort((a, b) => {
+    const nomeA = a.split(";;")[0].toLowerCase();
+    const nomeB = b.split(";;")[0].toLowerCase();
+
+    if (nomeA.includes("limpeza de pele") && !nomeB.includes("limpeza de pele")) return -1;
+    if (!nomeA.includes("limpeza de pele") && nomeB.includes("limpeza de pele")) return 1;
+
+    return nomeA.localeCompare(nomeB);
+  });
 
   return (
     <section className="scheduling-shell" id="agendar">
@@ -539,13 +545,16 @@ export default function SchedulingForm() {
                   }
                 }}
               >
-                {formData.servico || "Selecione um serviço"}
+                {/* CORREÇÃO: Limpando a exibição do serviço selecionado */}
+                {formData.servico ? formData.servico.split(";;")[0] : "Selecione um serviço"}
                 <span className={`dropdown-arrow ${isDropdownOpen ? 'open' : ''}`}>▼</span>
               </div>
 
               {isDropdownOpen && (
                 <div className="custom-dropdown-list">
-                  {procedimentos.map((proc) => {
+                  {/* CORREÇÃO: Usando a lista procedimentosOrdenados */}
+                  {procedimentosOrdenados.map((proc) => {
+                    // CORREÇÃO: Limpando a string para exibição na lista
                     const nomeLimpo = proc.split(";;")[0];
 
                     return (
@@ -610,7 +619,7 @@ export default function SchedulingForm() {
                 <div key={b.rowIndex} className="my-booking-card">
                   <div className="my-booking-info">
                     <strong>{b.date} às {b.time}</strong>
-                    <small>{b.servico}</small>
+                    <small>{b.servico.split(";;")[0]}</small> {/* Exibe o serviço limpo no card de "Meus horários" também! */}
                   </div>
                   <div className="my-booking-actions">
                     <button type="button" onClick={() => handleRescheduleBooking(b)} className="btn-action reschedule" title="Reagendar Horário">
