@@ -17,7 +17,7 @@ export default function Home() {
         <About />
         <Services />
         <Booking />
-        <ReviewsCarousel />
+        {/* <ReviewsCarousel /> */}
         <SchedulingForm />
       </main>
 

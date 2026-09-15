@@ -22,10 +22,14 @@ export async function GET() {
     const data = await response.json();
 
     // Se o Google encontrar o local e aprovar a requisição, devolvemos os dados limpos
-    if (data.result) {
+if (data.result) {
+      // Filtra para pegar apenas as avaliações de 4 e 5 estrelas
+      const avaliacoes = data.result.reviews || [];
+      const avaliacoesFiltradas = avaliacoes.filter((rev: any) => rev.rating >= 4);
+
       return NextResponse.json({
         rating: data.result.rating,
-        reviews: data.result.reviews || []
+        reviews: avaliacoesFiltradas
       });
     }
 
