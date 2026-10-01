@@ -38,9 +38,17 @@ export default function HorariosTab({ horarios, agendamentos, procedimentosRaw, 
     setSelectedSlots(prev => prev.find(i => i.data === data && i.hora === hora) ? prev.filter(i => !(i.data === data && i.hora === hora)) : [...prev, { data, hora }]);
   };
 
-  const horariosFiltrados = horarios.filter(s => {
+const horariosFiltrados = horarios.filter(s => {
     const t = buscaHorario.toLowerCase();
-    return s.data.includes(t) || s.hora.includes(t) || (s.id?.toLowerCase() || "").includes(t) || (s.cliente?.nome.toLowerCase() || "").includes(t) || (s.ocupado ? "Ocupado".includes(t) : "Livre".includes(t));
+    
+    // Declarando com a inicial maiúscula como na sua planilha
+    const statusVaga = s.ocupado ? "Ocupado" : "Livre"; 
+
+    return s.data.includes(t) || 
+           s.hora.includes(t) || 
+           (s.id?.toLowerCase() || "").includes(t) || 
+           (s.cliente?.nome.toLowerCase() || "").includes(t) || 
+           statusVaga.toLowerCase().includes(t);
   });
 
   return (
