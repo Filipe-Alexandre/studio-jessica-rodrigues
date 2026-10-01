@@ -716,7 +716,7 @@ const payload = {
               {(status.type === 'error' || status.type === 'info') ? status.message :
                 popupStep === 1 ? status.message :
                   popupStep === 2 ? "Tudo certo! Para não esquecer, adicione à sua agenda:" :
-                    "Prepare-se para seu momento de cuidado! Veja nossa localização:"}
+                    "Prepare-se para seu momento de auto cuidado! Veja nossa localização:"}
             </p>
 
             {status.type === 'success' && popupStep === 1 && (

@@ -40,7 +40,7 @@ export default function HorariosTab({ horarios, agendamentos, procedimentosRaw, 
 
   const horariosFiltrados = horarios.filter(s => {
     const t = buscaHorario.toLowerCase();
-    return s.data.includes(t) || s.hora.includes(t) || (s.id?.toLowerCase() || "").includes(t) || (s.cliente?.nome.toLowerCase() || "").includes(t) || (s.ocupado ? "ocupada".includes(t) : "livre".includes(t));
+    return s.data.includes(t) || s.hora.includes(t) || (s.id?.toLowerCase() || "").includes(t) || (s.cliente?.nome.toLowerCase() || "").includes(t) || (s.ocupado ? "Ocupado".includes(t) : "Livre".includes(t));
   });
 
   return (
