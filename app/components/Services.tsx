@@ -31,6 +31,11 @@ const services: ServiceItem[] = [
     title: "Epilação com linha",
     text: "Método 100% natural, hipoalergênico e higiênico que elimina até os pelos mais finos.",
     tag: "Precisão",
+  },
+  {
+    title: "Hydra Gloss",
+    text: "Procedimento de hidratação, rejuvenescimento e regeneração dos lábios, que auxilia na suavização das linhas finas e proporciona lábios mais hidratados, macios, viçosos e com aspecto rejuvenescido.",
+    tag: "Rejuvenescimento",
   }
 ];
 

@@ -352,16 +352,16 @@ export default function SchedulingForm() {
     setStatus({ type: "idle", message: "" });
     setPopupStep(1);
 
-    const payload = {
-      id: chosenSlot.id,
-      nome: formData.nome.trim(),
-      telefone: formData.telefone.trim(),
-      cpf: formData.cpf.trim(),
-      servico: formData.servico,
-      date: chosenSlot.date,
-      dayLabel: chosenSlot.dayLabel,
-      time: chosenSlot.time,
-    };
+const payload = {
+    id: chosenSlot.id,
+    nome: formData.nome.trim(),
+    telefone: formData.telefone.trim(),
+    cpf: formData.cpf.trim(),
+    servico: formData.servico.split(";;")[0],
+    date: chosenSlot.date,
+    dayLabel: chosenSlot.dayLabel,
+    time: chosenSlot.time,
+  };
 
     try {
       const response = await fetch("/api/booking", {
